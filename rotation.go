@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -499,8 +500,8 @@ type BackgroundWorkers struct {
 	taskQueue   chan BackgroundTask
 	wg          sync.WaitGroup
 	workers     int
-	activeTasks sync.WaitGroup // Track active tasks for synchronization
-	stopOnce    sync.Once      // Ensure stop is called only once
+	activeTasks atomic.Int64 // Track active tasks for synchronization
+	stopOnce    sync.Once    // Ensure stop is called only once
 }
 
 // newBackgroundWorkers creates a new worker pool
@@ -539,9 +540,9 @@ func (bg *BackgroundWorkers) worker() {
 
 // processTask executes a background task
 func (bg *BackgroundWorkers) processTask(task BackgroundTask) {
-	// Add task before processing
+	// Increment active task counter
 	bg.activeTasks.Add(1)
-	defer bg.activeTasks.Done()
+	defer bg.activeTasks.Add(-1)
 
 	switch task.TaskType {
 	case "cleanup":
@@ -564,7 +565,10 @@ func (bg *BackgroundWorkers) stop() {
 
 // waitForCompletion waits for all active tasks to complete
 func (bg *BackgroundWorkers) waitForCompletion() {
-	bg.activeTasks.Wait()
+	// Wait until no active tasks remain
+	for bg.activeTasks.Load() > 0 {
+		time.Sleep(1 * time.Millisecond)
+	}
 }
 
 // generateChecksum creates a SHA-256 checksum sidecar file for the given file
