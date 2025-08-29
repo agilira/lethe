@@ -1,11 +1,11 @@
 # Lethe: Super High-Performance Log Rotation for Go
 ### an AGILira fragment
 
-Lethe is a lock-free log rotation library for Go, built for applications that demand maximum performance, automatic file management, and production-grade reliability — with intelligent auto-scaling between synchronous and asynchronous modes.
+Lethe is a lock-free log rotation library for Go, designed for maximum performance, seamless file management, and production-grade reliability — featuring intelligent auto-scaling between synchronous and asynchronous modes.
 
 [![CI/CD Pipeline](https://github.com/agilira/lethe/actions/workflows/ci.yml/badge.svg)](https://github.com/agilira/lethe/actions/workflows/ci.yml)
-[![Security](https://img.shields.io/badge/security-gosec%20scanned-brightgreen.svg)](https://github.com/agilira/lethe/actions/workflows/ci.yml)
-[![Go Report Card](https://img.shields.io/badge/go%20report-A%2B-brightgreen.svg)](https://goreportcard.com/report/github.com/agilira/lethe)
+[![Security](https://img.shields.io/badge/security-gosec%20verified-brightgreen.svg)](https://github.com/agilira/lethe/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/agilira/lethe)](https://goreportcard.com/report/github.com/agilira/lethe)
 [![Test Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen.svg)](.)
 
 ### Features
