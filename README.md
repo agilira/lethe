@@ -16,9 +16,43 @@ Lethe is a lock-free log rotation library for Go, designed for maximum performan
 - **Native Iris Integration**: Specifically designed for Iris ultra-high performance logging
 - **Built to Scale** - handle millions of log entries with minimal latency
 
+## Installation
+
+```bash
+go get github.com/agilira/lethe
+```
+
+## Quick Start
+
+```go
+import "github.com/agilira/lethe"
+
+// Create logger with sensible defaults
+logger, err := lethe.NewWithDefaults("app.log")
+if err != nil {
+    log.Fatal(err)
+}
+defer logger.Close()
+
+// Use as io.Writer - works with any logging framework
+logger.Write([]byte("Hello, Lethe!\n"))
+```
+## Performance
+
+Lethe is engineered for ultra-high performance logging. The following benchmarks demonstrate sustained throughput with minimal overhead and intelligent auto-scaling.
+
+```
+Write Performance (Sync Mode):            ~3.3 μs/op     (zero-lock operations)
+Write Performance (MPSC Mode):            ~3.3 μs/op     (multi-producer scaling)
+High Contention (Sync):                   ~109 ns/op     (atomic coordination)
+High Contention (MPSC):                   ~105 ns/op     (lock-free scaling)
+Zero-Allocation Hot Paths:                0 B/op         (pre-allocated buffers)
+Throughput Scaling:                       1-1000+ goroutines (adaptive buffering)
+```
+
 ## Architecture
 
-Lethe provides intelligent log rotation through lock-free algorithms and adaptive performance scaling:
+Lethe's architecture is designed to scale intelligently. The diagram below illustrates how it auto-scales between sync and async modes based on load.
 
 ```mermaid
 graph TB
@@ -83,54 +117,14 @@ graph TB
 - Auto-scaling between sync/async modes
 - Background compression and integrity checks
 
-## Performance
-
-Lethe is engineered for ultra-high performance logging. The following benchmarks demonstrate sustained throughput with minimal overhead and intelligent auto-scaling.
-
-```
-Write Performance (Sync Mode):            ~3.3 μs/op     (zero-lock operations)
-Write Performance (MPSC Mode):            ~3.3 μs/op     (multi-producer scaling)
-High Contention (Sync):                   ~109 ns/op     (atomic coordination)
-High Contention (MPSC):                   ~105 ns/op     (lock-free scaling)
-Zero-Allocation Hot Paths:                0 B/op         (pre-allocated buffers)
-Throughput Scaling:                       1-1000+ goroutines (adaptive buffering)
-```
-
 **Native Integration:**
 - **Iris** - Native integration with zero-copy `WriteOwned()` API
 - **Standard Library** - Direct `io.Writer` implementation
-- **Universal Compatibility** - Works with any logging framework
-
-**Framework Support:**
-- **Logrus** - Drop-in replacement via `logrus.SetOutput(rotator)`
-- **Zap** - Core integration via `zapcore.AddSync(rotator)`
-- **Zerolog** - Direct integration via `zerolog.New(rotator)`
+- **Universal Compatibility** - Works with any logging framework (Zap, Zerolog, Logrus etc..)
 
 > **For Maximum Performance**: Use Iris integration with `WriteOwned()` for zero-copy transfers.
 > This achieves the highest throughput with minimal memory allocations.
 > See [docs/QUICK_START.md](docs/QUICK_START.md) for complete integration examples.
-
-## Installation
-
-```bash
-go get github.com/agilira/lethe
-```
-
-## Quick Start
-
-```go
-import "github.com/agilira/lethe"
-
-// Create logger with sensible defaults
-logger, err := lethe.NewWithDefaults("app.log")
-if err != nil {
-    log.Fatal(err)
-}
-defer logger.Close()
-
-// Use as io.Writer - works with any logging framework
-logger.Write([]byte("Hello, Lethe!\n"))
-```
 
 ## Use Cases
 
