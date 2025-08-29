@@ -2072,7 +2072,7 @@ func TestCrossPlatform_FilePermissions(t *testing.T) {
 }
 
 func TestSanitization_FilenameCharacters(t *testing.T) {
-	// Test that problematic characters are sanitized
+	// Test that problematic characters are sanitized cross-platform
 	tests := []struct {
 		name     string
 		input    string
@@ -2088,16 +2088,8 @@ func TestSanitization_FilenameCharacters(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			result := SanitizeFilename(test.input)
-			if runtime.GOOS == "windows" {
-				if result != test.expected {
-					t.Errorf("SanitizeFilename(%q) = %q, expected %q", test.input, result, test.expected)
-				}
-			} else {
-				// On Unix-like systems, only null characters should be replaced
-				expectedUnix := strings.ReplaceAll(test.input, "\x00", "_")
-				if result != expectedUnix {
-					t.Errorf("SanitizeFilename(%q) = %q, expected %q", test.input, result, expectedUnix)
-				}
+			if result != test.expected {
+				t.Errorf("SanitizeFilename(%q) = %q, expected %q", test.input, result, test.expected)
 			}
 		})
 	}
