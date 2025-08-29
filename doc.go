@@ -1,8 +1,8 @@
-// Package lethe provides universal log rotation designed primarily for integration with Iris logging library.
+// Package lethe provides universal log rotation, designed, originally, for Iris.
 //
 // Lethe offers superior performance through zero locks, zero allocations, and professional features
 // like compression, checksums, and time-based rotation. While compatible with standard logging libraries,
-// Lethe was specifically created to provide the highest performance log rotation for Iris high-performance logging.
+// Lethe was specifically created to provide the native log rotation for Iris but works perfectly with any logging library.
 //
 // # Quick Start
 //
