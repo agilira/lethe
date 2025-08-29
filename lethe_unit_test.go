@@ -523,8 +523,9 @@ func TestOSSpecificBehavior(t *testing.T) {
 	// Test filename sanitization
 	unsafeFilename := "test<>:\"|?*.log"
 	safeFilename := SanitizeFilename(unsafeFilename)
-	if safeFilename == unsafeFilename {
-		t.Error("Filename should have been sanitized")
+	expectedSafe := "test_______.log"
+	if safeFilename != expectedSafe {
+		t.Errorf("Filename should have been sanitized to %q, got %q", expectedSafe, safeFilename)
 	}
 
 	// Test on Windows specifically

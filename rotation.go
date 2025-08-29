@@ -539,6 +539,7 @@ func (bg *BackgroundWorkers) worker() {
 
 // processTask executes a background task
 func (bg *BackgroundWorkers) processTask(task BackgroundTask) {
+	// Add task before processing
 	bg.activeTasks.Add(1)
 	defer bg.activeTasks.Done()
 

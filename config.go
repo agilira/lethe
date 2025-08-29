@@ -124,30 +124,25 @@ func ParseDuration(s string) (time.Duration, error) {
 
 // SanitizeFilename removes or replaces invalid characters for cross-platform compatibility
 func SanitizeFilename(filename string) string {
-	if runtime.GOOS == "windows" {
-		// Windows invalid characters: < > : " | ? * and control characters
-		invalidChars := []string{"<", ">", ":", "\"", "|", "?", "*"}
-		result := filename
+	// Common invalid characters across platforms: < > : " | ? * and control characters
+	invalidChars := []string{"<", ">", ":", "\"", "|", "?", "*"}
+	result := filename
 
-		for _, char := range invalidChars {
-			result = strings.ReplaceAll(result, char, "_")
-		}
-
-		// Remove control characters (0-31)
-		var sanitized strings.Builder
-		for _, r := range result {
-			if r >= 32 {
-				sanitized.WriteRune(r)
-			} else {
-				sanitized.WriteRune('_')
-			}
-		}
-
-		return sanitized.String()
+	for _, char := range invalidChars {
+		result = strings.ReplaceAll(result, char, "_")
 	}
 
-	// For Unix-like systems, just remove null characters
-	return strings.ReplaceAll(filename, "\x00", "_")
+	// Remove control characters (0-31) and null characters
+	var sanitized strings.Builder
+	for _, r := range result {
+		if r >= 32 {
+			sanitized.WriteRune(r)
+		} else {
+			sanitized.WriteRune('_')
+		}
+	}
+
+	return sanitized.String()
 }
 
 // ValidatePathLength checks if the path length is within OS limits
