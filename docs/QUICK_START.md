@@ -44,7 +44,30 @@ if err != nil {
 defer logger.Close()
 ```
 
-### 3. Time-Based Rotation
+### 3. Advanced Configuration
+
+For production deployments with JSON files and environment variables:
+
+```go
+// Load from JSON file
+config, err := lethe.LoadFromJSONFile("config.json")
+if err != nil {
+    log.Fatal(err)
+}
+logger, err := lethe.NewWithConfig(config)
+
+// Or combine multiple sources (defaults + JSON + environment)
+source := lethe.ConfigSource{
+    Defaults:   &lethe.LoggerConfig{Filename: "app.log", MaxSizeStr: "10MB"},
+    JSONFile:   "config.json",
+    EnvPrefix:  "LETHE",
+}
+config, err := lethe.LoadFromSources(source)
+```
+
+**📖 See the [Configuration Guide](CONFIGURATION.md) for complete examples and best practices**
+
+### 4. Time-Based Rotation
 
 ```go
 // Daily rotation

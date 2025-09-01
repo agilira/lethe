@@ -517,6 +517,156 @@ func RetryFileOperation(operation func() error, retryCount int, retryDelay time.
 
 **Use case:** Handles transient failures due to antivirus scans, network issues, or high load.
 
+### LoadFromJSON
+
+Parses LoggerConfig from JSON data using Go's standard encoding/json package.
+
+```go
+func LoadFromJSON(jsonData []byte) (*LoggerConfig, error)
+```
+
+**Parameters:**
+- `jsonData`: JSON-encoded configuration data
+
+**Returns:**
+- `*LoggerConfig`: Parsed configuration
+- `error`: Parsing or validation errors
+
+**Example:**
+```go
+jsonConfig := `{
+    "filename": "app.log",
+    "max_size_str": "100MB",
+    "max_backups": 10,
+    "compress": true
+}`
+
+config, err := lethe.LoadFromJSON([]byte(jsonConfig))
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### LoadFromJSONFile
+
+Loads LoggerConfig from a JSON file with automatic file reading and parsing.
+
+```go
+func LoadFromJSONFile(filepath string) (*LoggerConfig, error)
+```
+
+**Parameters:**
+- `filepath`: Path to JSON configuration file
+
+**Returns:**
+- `*LoggerConfig`: Parsed configuration
+- `error`: File reading or parsing errors
+
+**Example:**
+```go
+config, err := lethe.LoadFromJSONFile("config.json")
+if err != nil {
+    log.Fatal(err)
+}
+
+logger, err := lethe.NewWithConfig(config)
+```
+
+### LoadFromEnv
+
+Loads LoggerConfig from environment variables with customizable prefix.
+
+```go
+func LoadFromEnv(prefix string) (*LoggerConfig, error)
+```
+
+**Parameters:**
+- `prefix`: Environment variable prefix (e.g., "LETHE")
+
+**Environment variable mapping:**
+- `{PREFIX}_FILENAME` → Filename
+- `{PREFIX}_MAX_SIZE` → MaxSizeStr
+- `{PREFIX}_MAX_AGE` → MaxAgeStr
+- `{PREFIX}_MAX_BACKUPS` → MaxBackups
+- `{PREFIX}_COMPRESS` → Compress
+- `{PREFIX}_ASYNC` → Async
+- And more...
+
+**Returns:**
+- `*LoggerConfig`: Configuration from environment
+- `error`: Parsing errors
+
+**Example:**
+```bash
+export LETHE_FILENAME="app.log"
+export LETHE_MAX_SIZE="100MB"
+export LETHE_COMPRESS="true"
+```
+
+```go
+config, err := lethe.LoadFromEnv("LETHE")
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+### LoadFromSources
+
+Loads LoggerConfig from multiple sources with precedence: Defaults → JSON → Environment.
+
+```go
+func LoadFromSources(source ConfigSource) (*LoggerConfig, error)
+```
+
+**Parameters:**
+- `source`: ConfigSource specifying configuration sources
+
+**ConfigSource structure:**
+```go
+type ConfigSource struct {
+    JSONFile  string            // Path to JSON config file
+    EnvPrefix string            // Environment variable prefix
+    Defaults  *LoggerConfig     // Fallback configuration
+}
+```
+
+**Returns:**
+- `*LoggerConfig`: Merged configuration
+- `error`: Loading or parsing errors
+
+**Example:**
+```go
+source := lethe.ConfigSource{
+    Defaults: &lethe.LoggerConfig{
+        Filename:   "default.log",
+        MaxSizeStr: "10MB",
+    },
+    JSONFile:  "config.json",
+    EnvPrefix: "LETHE",
+}
+
+config, err := lethe.LoadFromSources(source)
+```
+
+### ConfigSource
+
+Configuration structure for specifying multiple configuration sources.
+
+```go
+type ConfigSource struct {
+    JSONFile  string        // Optional: Path to JSON config file
+    EnvPrefix string        // Optional: Environment variable prefix
+    Defaults  *LoggerConfig // Optional: Fallback configuration
+}
+```
+
+**Fields:**
+- `JSONFile`: Path to JSON configuration file (can be empty)
+- `EnvPrefix`: Prefix for environment variables (can be empty)
+- `Defaults`: Default configuration values (can be nil)
+
+**Precedence order:** Defaults → JSON → Environment
+
 ## Integration Examples
 
 ### Standard Library Integration

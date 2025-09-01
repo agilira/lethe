@@ -1,0 +1,26 @@
+{
+  "_comment": "Lethe Logger Configuration Template - Copy and customize for your needs",
+  "_comment_production": "Remove all _comment fields before using in production",
+
+  "filename": "/var/log/app/app.log",
+
+  "max_size_str": "100MB",
+  "max_age_str": "7d",
+  "max_backups": 10,
+  "max_file_age": 0,
+
+  "compress": true,
+  "checksum": false,
+
+  "async": true,
+  "buffer_size": 4096,
+  "backpressure_policy": "adaptive",
+  "flush_interval": "5ms",
+  "adaptive_flush": false,
+
+  "local_time": true,
+
+  "file_mode": 420,
+  "retry_count": 3,
+  "retry_delay": "10ms"
+}

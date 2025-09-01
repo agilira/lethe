@@ -6,12 +6,13 @@ Lethe is a lock-free log rotation library for Go, designed for maximum performan
 [![CI/CD Pipeline](https://github.com/agilira/lethe/actions/workflows/ci.yml/badge.svg)](https://github.com/agilira/lethe/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/badge/security-gosec%20verified-brightgreen.svg)](https://github.com/agilira/lethe/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/agilira/lethe)](https://goreportcard.com/report/github.com/agilira/lethe)
-[![Test Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen.svg)](.)
+[![codecov](https://codecov.io/gh/agilira/lethe/branch/main/graph/badge.svg)](https://codecov.io/gh/agilira/lethe)
 
 ### Features
 - **Zero-Lock Architecture**: Atomic operations and CAS-based coordination eliminate mutex overhead
 - **Auto-Scaling Performance**: Intelligent switching between sync and MPSC modes based on contention
 - **Zero-Allocation Hot Paths**: Pre-allocated buffers and time caching reduce GC pressure
+- **Flexible Configuration**: JSON, environment variables, programmatic setup (zero deps)
 - **Universal Compatibility**: Direct `io.Writer` implementation works with any logging framework
 - **Native Iris Integration**: Specifically designed for Iris ultra-high performance logging
 - **Built to Scale** - handle millions of log entries with minimal latency
@@ -37,6 +38,60 @@ defer logger.Close()
 // Use as io.Writer - works with any logging framework
 logger.Write([]byte("Hello, Lethe!\n"))
 ```
+
+## Configuration
+
+Lethe supports flexible configuration from multiple sources with zero external dependencies:
+
+### JSON Configuration
+
+```go
+// Load from JSON
+jsonConfig := `{
+  "filename": "app.log",
+  "max_size_str": "100MB",
+  "max_backups": 10,
+  "compress": true,
+  "async": true
+}`
+
+config, err := lethe.LoadFromJSON([]byte(jsonConfig))
+logger, err := lethe.NewWithConfig(config)
+```
+
+### Environment Variables
+
+```bash
+export LETHE_FILENAME="app.log"
+export LETHE_MAX_SIZE="100MB"
+export LETHE_COMPRESS="true"
+export LETHE_ASYNC="true"
+```
+
+```go
+// Load from environment
+config, err := lethe.LoadFromEnv("LETHE")
+logger, err := lethe.NewWithConfig(config)
+```
+
+### Combined Configuration
+
+```go
+// Combine sources with precedence: Defaults → JSON → Environment
+source := lethe.ConfigSource{
+    Defaults:   &lethe.LoggerConfig{Filename: "app.log", MaxSizeStr: "10MB"},
+    JSONFile:   "config.json",
+    EnvPrefix:  "LETHE",
+}
+
+config, err := lethe.LoadFromSources(source)
+logger, err := lethe.NewWithConfig(config)
+```
+
+**Perfect for Docker, Kubernetes, and CI/CD deployments!**
+
+📖 **[Complete Configuration Guide](./docs/CONFIGURATION.md)**
+
 ## Performance
 
 Lethe is engineered for ultra-high performance logging. The following benchmarks demonstrate sustained throughput with minimal overhead and intelligent auto-scaling.
@@ -52,67 +107,34 @@ Throughput Scaling:                       1-1000+ goroutines (adaptive buffering
 
 ## Architecture
 
-Lethe's architecture is designed to scale intelligently. The diagram below illustrates how it auto-scales between sync and async modes based on load.
+Lethe's architecture intelligently auto-scales between sync and async modes based on load, ensuring optimal performance.
 
 ```mermaid
-graph TB
-    %% Application Layer
-    App[Application Code] --> LogFw[Logging Frameworks]
-    LogFw --> FwInt[Framework Integration<br/>Iris, Logrus, Zap]
-    
-    %% Lethe Logger Interface
-    FwInt --> WriteInt[Write Interface]
-    FwInt --> WriteOwned[WriteOwned Interface<br/>Zero-Copy]
-    FwInt --> AutoScale[Auto-Scaling Logic<br/>Contention Detection]
-    
-    %% Execution Modes
-    WriteInt --> SyncMode[SYNC MODE<br/>Default]
-    WriteOwned --> SyncMode
-    AutoScale --> SyncMode
-    AutoScale --> MPSCMode[MPSC MODE<br/>High Load]
-    
-    %% Sync Mode Flow
-    SyncMode --> SyncWrite[File.Write]
-    SyncWrite --> SyncAtomic[Atomic Update]
-    SyncAtomic --> SyncRot[Rotation Check]
-    
-    %% MPSC Mode Flow
-    MPSCMode --> RingBuf[Ring Buffer<br/>Lock-Free]
-    RingBuf --> Consumer[Consumer Goroutine]
-    Consumer --> MPSCWrite[File.Write]
-    MPSCWrite --> MPSCAtomic[Atomic Update]
-    MPSCAtomic --> MPSCRot[Rotation Check]
-    
-    %% Core Components
-    RingBuf --> RingBufDetails[Ring Buffer Details<br/>• CAS Operations<br/>• MPSC Pattern<br/>• Buffer Pool]
-    SyncWrite --> FileMgr[File Manager<br/>Atomic]
-    MPSCWrite --> FileMgr
-    FileMgr --> FileMgrDetails[File Manager Details<br/>• File Creation<br/>• Rotation<br/>• Size Tracking]
-    
-    %% Background Workers
-    SyncRot --> BgWorkers[Background Workers<br/>Async Tasks]
-    MPSCRot --> BgWorkers
-    BgWorkers --> BgDetails[Background Tasks<br/>• Compression<br/>• Cleanup<br/>• Checksums]
-    
-    %% File System
-    FileMgr --> CurrentLog[Current Log<br/>app.log<br/>• Active Writes<br/>• Size Tracking]
-    BgWorkers --> RotatedLogs[Rotated Logs<br/>timestamped<br/>• Backup Files<br/>• Age Management]
-    BgWorkers --> CompressedFiles[Compressed Files<br/>.gz + .sha256<br/>• Space Optimization<br/>• Integrity Verification]
-    
+graph LR
+    App[Application] --> Lethe[Lethe Logger]
+    Lethe --> Sync[Sync Mode]
+    Lethe --> MPSC[MPSC Mode]
+    Sync --> File[(Log File)]
+    MPSC --> Buffer[Ring Buffer]
+    Buffer --> Consumer[Consumer]
+    Consumer --> File
+    File --> Rotate[Rotation]
+
     %% Styling
-    classDef applicationLayer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef letheLayer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef executionLayer fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef coreLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
-    classDef fileLayer fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    
-    class App,LogFw,FwInt applicationLayer
-    class WriteInt,WriteOwned,AutoScale letheLayer
-    class SyncMode,MPSCMode,SyncWrite,SyncAtomic,SyncRot,MPSCWrite,MPSCAtomic,MPSCRot executionLayer
-    class RingBuf,Consumer,RingBufDetails,FileMgr,FileMgrDetails,BgWorkers,BgDetails coreLayer
-    class CurrentLog,RotatedLogs,CompressedFiles fileLayer
+    classDef app fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef lethe fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef mode fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef buffer fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef file fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+
+    class App app
+    class Lethe lethe
+    class Sync,MPSC,Consumer mode
+    class Buffer buffer
+    class File,Rotate file
 ```
 
+**Key Features:**
 - Zero-lock operations with atomic coordination
 - Auto-scaling between sync/async modes
 - Background compression and integrity checks
@@ -124,7 +146,8 @@ graph TB
 
 > **For Maximum Performance**: Use Iris integration with `WriteOwned()` for zero-copy transfers.
 > This achieves the highest throughput with minimal memory allocations.
-> See [docs/QUICK_START.md](docs/QUICK_START.md) for complete integration examples.
+
+📖 **See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical architecture**
 
 ## Use Cases
 
@@ -170,7 +193,8 @@ config := &lethe.LoggerConfig{
 
 **Quick Links:**
 - **[Quick Start Guide](./docs/QUICK_START.md)** - Get running in 2 minutes
-- **[API Reference](./docs/API.md)** - Complete API documentation  
+- **[Configuration Guide](./docs/CONFIGURATION.md)** - JSON, environment variables, and advanced setup
+- **[API Reference](./docs/API.md)** - Complete API documentation
 - **[Architecture Guide](./docs/ARCHITECTURE.md)** - Deep dive into zero-lock log rotation design
 - **[Examples](./examples/)** - Production-ready integration patterns
 

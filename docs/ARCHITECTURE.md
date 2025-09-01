@@ -23,22 +23,65 @@ Lethe is a high-performance log rotation library designed for Go applications re
 
 ## System Architecture
 
-### Component Overview
+### Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Lethe Log Rotator                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   Writer    │  │   Rotator   │  │   Background        │  │
-│  │   Interface │  │   Engine    │  │   Workers           │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-│         │                │                    │              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │   MPSC      │  │   File      │  │   Compression       │  │
-│  │   Buffer    │  │   Manager   │  │   & Cleanup         │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    %% Application Layer
+    App[Application Code] --> LogFw[Logging Frameworks]
+    LogFw --> FwInt[Framework Integration<br/>Iris, Logrus, Zap]
+
+    %% Lethe Logger Interface
+    FwInt --> WriteInt[Write Interface]
+    FwInt --> WriteOwned[WriteOwned Interface<br/>Zero-Copy]
+    FwInt --> AutoScale[Auto-Scaling Logic<br/>Contention Detection]
+
+    %% Execution Modes
+    WriteInt --> SyncMode[SYNC MODE<br/>Default]
+    WriteOwned --> SyncMode
+    AutoScale --> SyncMode
+    AutoScale --> MPSCMode[MPSC MODE<br/>High Load]
+
+    %% Sync Mode Flow
+    SyncMode --> SyncWrite[File.Write]
+    SyncWrite --> SyncAtomic[Atomic Update]
+    SyncAtomic --> SyncRot[Rotation Check]
+
+    %% MPSC Mode Flow
+    MPSCMode --> RingBuf[Ring Buffer<br/>Lock-Free]
+    RingBuf --> Consumer[Consumer Goroutine]
+    Consumer --> MPSCWrite[File.Write]
+    MPSCWrite --> MPSCAtomic[Atomic Update]
+    MPSCAtomic --> MPSCRot[Rotation Check]
+
+    %% Core Components
+    RingBuf --> RingBufDetails[Ring Buffer Details<br/>• CAS Operations<br/>• MPSC Pattern<br/>• Buffer Pool]
+    SyncWrite --> FileMgr[File Manager<br/>Atomic]
+    MPSCWrite --> FileMgr
+    FileMgr --> FileMgrDetails[File Manager Details<br/>• File Creation<br/>• Rotation<br/>• Size Tracking]
+
+    %% Background Workers
+    SyncRot --> BgWorkers[Background Workers<br/>Async Tasks]
+    MPSCRot --> BgWorkers
+    BgWorkers --> BgDetails[Background Tasks<br/>• Compression<br/>• Cleanup<br/>• Checksums]
+
+    %% File System
+    FileMgr --> CurrentLog[Current Log<br/>app.log<br/>• Active Writes<br/>• Size Tracking]
+    BgWorkers --> RotatedLogs[Rotated Logs<br/>timestamped<br/>• Backup Files<br/>• Age Management]
+    BgWorkers --> CompressedFiles[Compressed Files<br/>.gz + .sha256<br/>• Space Optimization<br/>• Integrity Verification]
+
+    %% Styling
+    classDef applicationLayer fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef letheLayer fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef executionLayer fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef coreLayer fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef fileLayer fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+
+    class App,LogFw,FwInt applicationLayer
+    class WriteInt,WriteOwned,AutoScale letheLayer
+    class SyncMode,MPSCMode,SyncWrite,SyncAtomic,SyncRot,MPSCWrite,MPSCAtomic,MPSCRot executionLayer
+    class RingBuf,Consumer,RingBufDetails,FileMgr,FileMgrDetails,BgWorkers,BgDetails coreLayer
+    class CurrentLog,RotatedLogs,CompressedFiles fileLayer
 ```
 
 ### Core Components
