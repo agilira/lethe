@@ -4780,7 +4780,7 @@ func TestAdjustFlushTiming_Coverage(t *testing.T) {
 		// Fill buffer without adaptive flush
 		smallData := make([]byte, 50)
 		for i := 0; i < 5; i++ {
-			logger.Write(smallData)
+			_, _ = logger.Write(smallData) // Error handling not critical for test setup
 		}
 
 		t.Logf("Non-adaptive flush timing test completed")
@@ -5269,7 +5269,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 		// Fill buffer with many small writes to trigger adaptive resize failure
 		smallData := make([]byte, 5)
 		for i := 0; i < 50; i++ { // Much more than buffer can hold
-			logger.Write(smallData)
+			_, _ = logger.Write(smallData) // Error handling not critical for buffer filling
 		}
 
 		t.Logf("Adaptive resize failure test completed")
@@ -6270,7 +6270,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 		// Fill buffer to near capacity
 		data := []byte("resize_edge_test")
 		for i := 0; i < 100; i++ {
-			logger.Write(data)
+			_, _ = logger.Write(data) // Error handling not critical for extreme stress test
 		}
 
 		t.Logf("Buffer resize edge cases test completed")
@@ -6293,7 +6293,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 		// Test with drop policy
 		data := []byte("drop_test")
 		for i := 0; i < 10; i++ {
-			logger.Write(data)
+			_, _ = logger.Write(data) // Error handling not critical for policy switching test
 		}
 
 		// Simulate policy change (we can't actually change it at runtime,
