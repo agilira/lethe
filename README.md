@@ -7,7 +7,7 @@ Lethe is a lock-free log rotation library for Go, designed for maximum performan
 [![Security](https://img.shields.io/badge/security-gosec-brightgreen.svg)](https://github.com/agilira/lethe/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/agilira/lethe)](https://goreportcard.com/report/github.com/agilira/lethe)
 [![codecov](https://codecov.io/gh/agilira/lethe/branch/main/graph/badge.svg)](https://codecov.io/gh/agilira/lethe)
-![Static Badge](https://img.shields.io/badge/Xantos%20Power-8A2BE2?style=flat)
+![Xantos Powered](https://img.shields.io/badge/Xantos%20Powered-8A2BE2?style=flat)
 
 ### Features
 - **Zero-Lock Architecture**: Atomic operations and CAS-based coordination eliminate mutex overhead
