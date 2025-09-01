@@ -4503,7 +4503,7 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 		// Fill buffer to trigger adjustFlushTiming
 		largeData := make([]byte, 200)
 		for i := 0; i < 5; i++ {
-			logger.Write(largeData)
+			_, _ = logger.Write(largeData) // Error handling not critical for test data generation
 			time.Sleep(10 * time.Millisecond)
 		}
 
@@ -4752,7 +4752,7 @@ func TestAdjustFlushTiming_Coverage(t *testing.T) {
 		// Create buffer contention by filling it rapidly
 		smallData := make([]byte, 50)
 		for i := 0; i < 10; i++ {
-			logger.Write(smallData)
+			_, _ = logger.Write(smallData) // Error handling not critical for buffer filling
 			// Small delay to create timing patterns
 			time.Sleep(5 * time.Millisecond)
 		}
@@ -5542,7 +5542,7 @@ func TestExtremeEdgeCases(t *testing.T) {
 
 		// Fill buffer to trigger drop
 		for i := 0; i < 20; i++ {
-			logger2.Write([]byte("fill"))
+			_, _ = logger2.Write([]byte("fill")) // Error handling not critical for buffer filling
 		}
 
 		// Test 3: Async with adaptive policy
@@ -5560,7 +5560,7 @@ func TestExtremeEdgeCases(t *testing.T) {
 
 		// Fill buffer to trigger adaptive
 		for i := 0; i < 20; i++ {
-			logger3.Write([]byte("adaptive"))
+			_, _ = logger3.Write([]byte("adaptive")) // Error handling not critical for buffer filling
 		}
 
 		t.Logf("All writeAsyncOwned branches tested")

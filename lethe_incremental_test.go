@@ -68,7 +68,7 @@ func TestWriteAsyncOwned_MissingBranches(t *testing.T) {
 
 		// Pre-initialize the buffer
 		testData := []byte("init")
-		logger.writeAsyncOwned(testData)
+		_, _ = logger.writeAsyncOwned(testData) // Error handling not needed for test setup
 		time.Sleep(10 * time.Millisecond)
 
 		// Now force conditions that can cause CAS failure
@@ -156,6 +156,7 @@ func TestValidatePathLength_EdgeCases(t *testing.T) {
 		err := ValidatePathLength(invalidPath)
 		if err == nil {
 			t.Error("Path with null byte should cause error")
+			return
 		}
 		if !strings.Contains(err.Error(), "invalid path") {
 			t.Errorf("Error should contain 'invalid path', got: %v", err)
@@ -422,13 +423,13 @@ func TestSafeSubmitTask_CompleteCoverage(t *testing.T) {
 		for i := range data {
 			data[i] = 'A'
 		}
-		logger.Write(data)
+		_, _ = logger.Write(data) // Error handling not critical for buffer initialization
 		time.Sleep(20 * time.Millisecond)
 
 		// Now test safeSubmitTask with active workers
 		// Create a temporary file for the compress task
 		testFile := filepath.Join(tempDir, "test_for_compress.log")
-		os.WriteFile(testFile, []byte("test content"), 0644)
+		_ = os.WriteFile(testFile, []byte("test content"), 0644) // Test file creation, error not critical
 
 		task := BackgroundTask{
 			TaskType: "compress",
@@ -505,7 +506,7 @@ func TestGenerateChecksum_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating file: %v", err)
 		}
-		defer os.Chmod(testFile, 0644) // Restore for cleanup
+		defer func() { _ = os.Chmod(testFile, 0644) }() // Restore for cleanup, ignore error
 
 		// Should gracefully handle the read error
 		logger.generateChecksum(testFile)
@@ -611,7 +612,7 @@ func TestCompressFile_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error removing permissions: %v", err)
 		}
-		defer os.Chmod(tempDir, 0755) // Restore for cleanup
+		defer func() { _ = os.Chmod(tempDir, 0755) }() // Restore for cleanup, ignore error
 
 		// Test compressFile with error in creating the target file
 		logger.compressFile(testFile)
@@ -680,7 +681,7 @@ func TestCreateLogDirectory_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error removing permissions: %v", err)
 		}
-		defer os.Chmod(tempDir, 0755) // Restore for cleanup
+		defer func() { _ = os.Chmod(tempDir, 0755) }() // Restore for cleanup, ignore error
 
 		// Try to create logger in directory without permissions
 		restrictedPath := filepath.Join(tempDir, "restricted", "test.log")
@@ -822,7 +823,7 @@ func TestRetryFileOperation_CompleteEdgeCases(t *testing.T) {
 		// Test branch retryDelay <= 0 uses default 10ms
 		start := time.Now()
 		callCount := 0
-		RetryFileOperation(func() error {
+		_ = RetryFileOperation(func() error { // Error not checked in test setup
 			callCount++
 			return os.ErrClosed // Always failure
 		}, 2, 0) // Retry delay zero
