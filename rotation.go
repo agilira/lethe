@@ -394,7 +394,17 @@ func (l *Logger) compressFile(filename string) {
 		l.reportError("compress_open", err)
 		return
 	}
-	defer source.Close()
+	var sourceCloseOnce sync.Once
+	defer func() {
+		sourceCloseOnce.Do(func() {
+			if closeErr := source.Close(); closeErr != nil {
+				// Only report if it's not "file already closed"
+				if !isFileAlreadyClosedError(closeErr) {
+					l.reportError("compress_source_close", closeErr)
+				}
+			}
+		})
+	}()
 
 	// Use temporary file for crash consistency
 	compressedName := filename + ".gz"
@@ -406,36 +416,62 @@ func (l *Logger) compressFile(filename string) {
 		l.reportError("compress_create", err)
 		return
 	}
-	defer target.Close()
+	var targetCloseOnce sync.Once
+	defer func() {
+		targetCloseOnce.Do(func() {
+			if closeErr := target.Close(); closeErr != nil {
+				// Only report if it's not "file already closed"
+				if !isFileAlreadyClosedError(closeErr) {
+					l.reportError("compress_target_close", closeErr)
+				}
+			}
+		})
+	}()
 
 	// Create gzip writer
 	gzWriter := gzip.NewWriter(target)
-	defer gzWriter.Close()
+	var gzCloseOnce sync.Once
+	defer func() {
+		gzCloseOnce.Do(func() {
+			if closeErr := gzWriter.Close(); closeErr != nil {
+				// Only report if it's not "file already closed"
+				if !isFileAlreadyClosedError(closeErr) {
+					l.reportError("compress_gzip_close", closeErr)
+				}
+			}
+		})
+	}()
 
 	// Copy data with compression
 	_, err = io.Copy(gzWriter, source)
 	if err != nil {
-		// Clean up failed compression
-		_ = target.Close()      // Ignore close error during cleanup
+		// Clean up failed compression - use sync.Once to avoid duplicate closes
+		gzCloseOnce.Do(func() { _ = gzWriter.Close() })
+		targetCloseOnce.Do(func() { _ = target.Close() })
 		_ = os.Remove(tempName) // Ignore remove error during cleanup
 		l.reportError("compress_copy", err)
 		return
 	}
 
 	// Close gzip writer to finalize compression
-	err = gzWriter.Close()
-	if err != nil {
-		_ = target.Close()      // Ignore close error during cleanup
+	var finalizeErr error
+	gzCloseOnce.Do(func() {
+		finalizeErr = gzWriter.Close()
+	})
+	if finalizeErr != nil {
 		_ = os.Remove(tempName) // Ignore remove error during cleanup
-		l.reportError("compress_finalize", err)
+		l.reportError("compress_finalize", finalizeErr)
 		return
 	}
 
 	// Close target file
-	err = target.Close()
-	if err != nil {
+	var closeErr error
+	targetCloseOnce.Do(func() {
+		closeErr = target.Close()
+	})
+	if closeErr != nil {
 		_ = os.Remove(tempName) // Ignore remove error during cleanup
-		l.reportError("compress_close", err)
+		l.reportError("compress_close", closeErr)
 		return
 	}
 
@@ -601,7 +637,14 @@ func (l *Logger) generateChecksum(filename string) {
 		l.reportError("checksum_open", fmt.Errorf("failed to open file for checksum %s: %v", filename, err))
 		return
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Only report if it's not "file already closed"
+			if !isFileAlreadyClosedError(closeErr) {
+				l.reportError("checksum_file_close", closeErr)
+			}
+		}
+	}()
 
 	// Calculate SHA-256 hash
 	hash := sha256.New()
@@ -622,4 +665,15 @@ func (l *Logger) generateChecksum(filename string) {
 		l.reportError("checksum_write", fmt.Errorf("failed to write checksum file %s: %v", checksumFile, err))
 		return
 	}
+}
+
+// isFileAlreadyClosedError checks if the error indicates the file is already closed
+func isFileAlreadyClosedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "file already closed") ||
+		strings.Contains(errStr, "use of closed file") ||
+		strings.Contains(errStr, "bad file descriptor")
 }

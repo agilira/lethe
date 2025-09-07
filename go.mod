@@ -1,5 +1,15 @@
 module github.com/agilira/lethe
 
-go 1.23
+go 1.23.11
 
-require github.com/agilira/go-timecache v1.0.0
+toolchain go1.24.5
+
+require (
+	github.com/agilira/argus v1.0.1
+	github.com/agilira/go-timecache v1.0.1
+)
+
+require (
+	github.com/agilira/flash-flags v1.0.1 // indirect
+	github.com/agilira/go-errors v1.1.0 // indirect
+)
