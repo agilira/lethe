@@ -22,7 +22,7 @@ var (
 	errNoCurrentFile = errors.New("no current file")
 )
 
-// Logger provides universal log rotation with lumberjack compatibility.
+// Logger provides universal log rotation.
 // It offers zero locks, zero allocations in hot path, and is thread-safe by design.
 // Advanced features include MPSC mode for high-throughput scenarios.
 //
