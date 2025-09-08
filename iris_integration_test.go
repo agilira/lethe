@@ -128,7 +128,11 @@ func TestIrisIntegrationInterface(t *testing.T) {
 	logFile := filepath.Join(tempDir, "interface_test.log")
 
 	writer := QuickStart(logFile)
-	defer writer.Close()
+	defer func() {
+		if err := writer.Close(); err != nil {
+			t.Logf("Warning: Failed to close writer: %v", err)
+		}
+	}()
 
 	// Test all interface methods
 
@@ -181,7 +185,11 @@ func TestIrisIntegrationPerformance(t *testing.T) {
 	logFile := filepath.Join(tempDir, "perf_test.log")
 
 	writer := QuickStart(logFile)
-	defer writer.Close()
+	defer func() {
+		if err := writer.Close(); err != nil {
+			t.Logf("Warning: Failed to close writer: %v", err)
+		}
+	}()
 
 	// Write many messages to test performance
 	testData := []byte("Performance test message\n")

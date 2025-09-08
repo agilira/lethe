@@ -42,7 +42,11 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create config watcher: %v", err))
 	}
-	defer watcher.Stop()
+	defer func() {
+		if err := watcher.Stop(); err != nil {
+			fmt.Printf("Warning: Failed to stop watcher: %v\n", err)
+		}
+	}()
 
 	// Start watching for config changes
 	if err := watcher.Start(); err != nil {

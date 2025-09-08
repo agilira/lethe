@@ -65,7 +65,11 @@ func TestHotReloadIntegration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to enable dynamic config: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		if err := watcher.Stop(); err != nil {
+			t.Logf("Warning: Failed to stop watcher: %v", err)
+		}
+	}()
 
 	t.Log("Initial setup complete")
 

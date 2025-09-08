@@ -311,6 +311,7 @@ func CreateSampleConfig(filename string) error {
   "adaptive_flush": true
 }`
 
+	// #nosec G306 -- Config file permissions 0644 are standard for configuration files
 	if err := os.WriteFile(filename, []byte(configWithComments), 0644); err != nil {
 		return fmt.Errorf("failed to write sample config: %w", err)
 	}
