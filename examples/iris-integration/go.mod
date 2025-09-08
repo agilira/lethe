@@ -4,10 +4,8 @@ go 1.24.5
 
 replace github.com/agilira/lethe => ../..
 
-replace github.com/agilira/iris => /home/antonio-giordano/Desktop/GitHub/iris
-
 require (
-	github.com/agilira/iris v1.1.0
+	github.com/agilira/iris v1.1.1
 	github.com/agilira/lethe v1.0.0
 )
 
