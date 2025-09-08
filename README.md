@@ -40,6 +40,52 @@ defer logger.Close()
 logger.Write([]byte("Hello, Lethe!\n"))
 ```
 
+## Magic API for Iris Integration
+
+Automatic zero-configuration integration with Iris
+
+### QuickStart (Recommended)
+```go
+import (
+    "github.com/agilira/iris"
+    "github.com/agilira/lethe"
+)
+
+// One line - production ready with rotation!
+writer := lethe.QuickStart("app.log")
+defer writer.Close()
+
+// Direct Iris integration with automatic optimization
+logger, err := iris.New(iris.Config{Output: writer})
+defer logger.Close()
+logger.Start()
+
+// Use normally - automatic optimization is applied
+logger.Info("Magic API provides seamless integration")
+```
+
+### Custom Configuration
+```go
+// Advanced Magic API with custom settings
+writer := lethe.NewIrisWriter("app.log", &lethe.Logger{
+    MaxSizeStr: "200MB",
+    MaxBackups: 10,
+    Compress:   true,
+    Async:      true,
+})
+
+// Automatic runtime optimization automatically detected
+logger, err := iris.New(iris.Config{Output: writer})
+```
+
+**Magic Features:**
+- **Zero Configuration**: `QuickStart()` provides instant production-ready logging
+- **Runtime Integration**: Automatic `WriteOwned()` zero-copy optimization
+- **Auto-Detection**: Runtime capability discovery and performance tuning
+- **Graceful Fallback**: Works with any logger, optimizes specifically with Iris
+
+> **Complete Magic API Guide**: [docs/IRIS_INTEGRATION.md](docs/IRIS_INTEGRATION.md) | **Examples**: [examples/iris-integration/](examples/iris-integration/)
+
 ## Configuration
 
 Lethe supports flexible configuration from multiple sources with zero external dependencies:
@@ -141,18 +187,19 @@ graph LR
 - Background compression and integrity checks
 
 **Native Integration:**
-- **Iris** - Native integration with zero-copy `WriteOwned()` API
+- **Iris Magic API** - Automatic runtime integration with `lethe.QuickStart()` and `lethe.NewIrisWriter()`
+- **Zero-Copy Optimization** - Automatic `WriteOwned()` detection for maximum performance
 - **Standard Library** - Direct `io.Writer` implementation
 - **Universal Compatibility** - Works with any logging framework (Zap, Zerolog, Logrus etc..)
 
-> **For Maximum Performance**: Use Iris integration with `WriteOwned()` for zero-copy transfers.
-> This achieves the highest throughput with minimal memory allocations.
+> **For Maximum Performance & Simplicity**: Use Iris Magic API integration with `lethe.QuickStart("app.log")` for instant production-ready logging with automatic optimization. Zero configuration required.
 
 📖 **See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed technical architecture**
 
 ## Use Cases
 
-- **Ultra-High Performance Logging**: Iris integration with zero-copy transfers
+- **Iris Magic API Integration**: Zero-configuration logging with automatic runtime optimization
+- **Ultra-High Performance Logging**: Zero-copy transfers with `WriteOwned()` capability detection
 - **Microservices Logging**: Automatic rotation with compression and cleanup
 - **High-Throughput Applications**: Auto-scaling between sync/async modes
 - **Production Systems**: Crash-safe operations with integrity checks
@@ -194,6 +241,7 @@ config := &lethe.LoggerConfig{
 
 **Quick Links:**
 - **[Quick Start Guide](./docs/QUICK_START.md)** - Get running in 2 minutes
+- **[Iris Magic API Guide](./docs/IRIS_INTEGRATION.md)** - Automatic runtime integration
 - **[Configuration Guide](./docs/CONFIGURATION.md)** - JSON, environment variables, and advanced setup
 - **[API Reference](./docs/API.md)** - Complete API documentation
 - **[Architecture Guide](./docs/ARCHITECTURE.md)** - Deep dive into zero-lock log rotation design

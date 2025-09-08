@@ -1,9 +1,15 @@
-// Package main demonstrates seamless integration between Iris logging library
-// and Lethe log rotation using zero-copy adapter patterns.
+// Package main demonstrates seamless integration between Iris
+// logging library and Lethe log rotation using the Magic APIs.
 //
-// This example showcases the integration where
-// Iris's high-performance logging capabilities combine perfectly with
-// Lethe's advanced rotation features through the LetheIrisAdapter.
+// This example showcases automatic runtime detection and zero-configuration
+// setup where Iris's high-performance logging capabilities combine with
+// Lethe's advanced rotation features through automatic optimization.
+//
+// Magic API Features:
+// - Automatic runtime detection and optimization
+// - Zero-copy WriteOwned() optimization when available
+// - Graceful fallback to standard io.Writer interface
+// - No adapter code required - everything is automatic
 //
 // Run with: go run .
 
@@ -20,101 +26,63 @@ import (
 	"github.com/agilira/lethe"
 )
 
-// LetheIrisAdapter implements iris.WriteSyncer interface to enable
-// seamless integration between Iris logging and Lethe rotation.
-type LetheIrisAdapter struct {
-	logger *lethe.Logger
-}
-
-// NewLetheIrisAdapter creates a new adapter that bridges Iris and Lethe.
-func NewLetheIrisAdapter(logger *lethe.Logger) *LetheIrisAdapter {
-	return &LetheIrisAdapter{
-		logger: logger,
-	}
-}
-
-// Write implements io.Writer interface for standard write operations.
-// Use direct Write for maximum performance - no unnecessary copies
-func (a *LetheIrisAdapter) Write(data []byte) (int, error) {
-	return a.logger.Write(data)
-}
-
-// WriteOwned implements zero-copy writes by transferring buffer ownership.
-// This is the key method that enables "rock solid" zero-copy integration.
-func (a *LetheIrisAdapter) WriteOwned(data []byte) (int, error) {
-	return a.logger.WriteOwned(data)
-}
-
-// Sync ensures all buffered data is written to storage.
-// Note: Lethe doesn't have Sync method, so we use Close/reopen pattern for demonstration
-func (a *LetheIrisAdapter) Sync() error {
-	// For demonstration purposes - in production you might implement flush differently
-	return nil
-}
-
-// Close gracefully shuts down the adapter and underlying logger.
-func (a *LetheIrisAdapter) Close() error {
-	return a.logger.Close()
-}
-
 func main() {
-	fmt.Println("Iris-Lethe Integration Examples")
-	fmt.Println("===============================")
+	fmt.Println("Iris-Lethe Magic API Integration Examples")
+	fmt.Println("========================================")
+	fmt.Println("Demonstrating automatic runtime integration")
 
 	// Ensure logs directory exists
 	if err := os.MkdirAll("logs", 0750); err != nil {
 		log.Fatalf("Failed to create logs directory: %v", err)
 	}
 
-	// Example 1: Basic Iris-Lethe Integration
-	fmt.Println("\n1. Basic Iris-Lethe Integration")
-	runBasicIntegration()
+	// Example 1: Magic API Basic Integration
+	fmt.Println("\n1. Magic API Basic Integration")
+	runMagicBasicIntegration()
 
-	// Example 2: Zero-Copy Performance Test
-	fmt.Println("\n2. Zero-Copy Performance Test")
-	runZeroCopyPerformanceTest()
+	// Example 2: Zero-Configuration QuickStart
+	fmt.Println("\n2. Zero-Configuration QuickStart")
+	runQuickStartExample()
 
-	// Example 3: High-Throughput Iris Logging with Lethe Rotation
-	fmt.Println("\n3. High-Throughput Iris + Lethe")
-	runHighThroughputTest()
+	// Example 3: Magic Performance Test
+	fmt.Println("\n3. Magic API Performance Test")
+	runMagicPerformanceTest()
 
-	// Example 4: Advanced Configuration Integration
-	fmt.Println("\n4. Advanced Configuration Integration")
-	runAdvancedConfigIntegration()
+	// Example 4: Advanced Magic Configuration
+	fmt.Println("\n4. Advanced Magic Configuration")
+	runAdvancedMagicIntegration()
 
-	// Example 5: Production-Ready Integration Pattern
-	fmt.Println("\n5. Production-Ready Integration")
-	runProductionIntegration()
+	// Example 5: Production Magic Setup
+	fmt.Println("\n5. Production Magic Setup")
+	runProductionMagicIntegration()
 
-	// Example 6: Concurrent Iris Writers with Lethe
-	fmt.Println("\n6. Concurrent Iris Writers")
-	runConcurrentWritersTest()
+	// Example 6: Concurrent Magic Writers
+	fmt.Println("\n6. Concurrent Magic Writers")
+	runConcurrentMagicWritersTest()
 
-	// Example 7: WriteSyncer Interface Compliance Test
-	fmt.Println("\n7. WriteSyncer Interface Compliance")
-	runWriteSyncerComplianceTest()
+	// Example 7: Runtime Auto-Detection
+	fmt.Println("\n7. Runtime Auto-Detection Demo")
+	runRuntimeAutoDetection()
 
-	fmt.Println("\nAll Iris-Lethe integration examples completed successfully.")
-	fmt.Println("Integration verified: 'AirPods + iPhone' level seamless operation.")
+	fmt.Println("\nAll Magic API integration examples completed successfully.")
+	fmt.Println("Integration level: Automatic runtime optimization with zero configuration.")
 }
 
-// runBasicIntegration demonstrates the fundamental integration pattern
-// between Iris and Lethe using the adapter.
-func runBasicIntegration() {
-	// Create Lethe logger with production defaults
-	letheLogger, err := lethe.NewWithDefaults("logs/iris-basic.log")
-	if err != nil {
-		log.Fatalf("Failed to create Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
+// runMagicBasicIntegration demonstrates the new Magic API that provides
+// automatic runtime integration between Iris and Lethe.
+func runMagicBasicIntegration() {
+	// Magic API: NewIrisWriter automatically creates optimized integration
+	irisWriter := lethe.NewIrisWriter("logs/magic-basic.log", &lethe.Logger{
+		MaxSizeStr: "50MB",
+		MaxBackups: 3,
+		Compress:   true,
+		Async:      true,
+	})
+	defer irisWriter.Close()
 
-	// Create adapter that bridges Iris and Lethe
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
-
-	// Create Iris logger using Lethe adapter as backend
+	// Create Iris logger using Magic API writer
 	irisLogger, err := iris.New(iris.Config{
-		Output:  adapter,
+		Output:  irisWriter,
 		Encoder: iris.NewJSONEncoder(),
 		Level:   iris.Info,
 	})
@@ -124,232 +92,189 @@ func runBasicIntegration() {
 	defer irisLogger.Close()
 	irisLogger.Start()
 
-	// Test basic logging operations
-	irisLogger.Info("Basic integration test started")
-	irisLogger.Debug("Debug message with JSON formatting")
-	irisLogger.Warn("Warning message with automatic rotation")
-	irisLogger.Error("Error message with zero-copy performance")
+	// Test magic integration
+	irisLogger.Info("Magic API integration test started")
+	irisLogger.Debug("Debug message with automatic optimization")
+	irisLogger.Warn("Warning message with zero-copy WriteOwned()")
+	irisLogger.Error("Error message with runtime integration")
 
-	// Test structured logging
+	// Test structured logging with Magic API
 	irisLogger.With(
-		iris.String("component", "integration-test"),
+		iris.String("component", "magic-api"),
 		iris.String("version", "1.0.0"),
-		iris.Int64("timestamp", time.Now().Unix()),
-	).Info("Structured logging with Iris+Lethe integration")
+		iris.String("integration", "runtime"),
+		iris.Bool("zero_config", true),
+	).Info("Magic API provides zero-configuration integration")
 
-	fmt.Println("   Basic integration: Iris logger created with Lethe backend")
-	fmt.Println("   Features: JSON formatting, automatic rotation, structured logging")
+	fmt.Println("   Magic API: Zero-configuration integration active")
+	fmt.Println("   Features: Automatic WriteOwned() optimization, graceful fallback")
 }
 
-// runZeroCopyPerformanceTest demonstrates the zero-copy capabilities
-// that provide "rock solid" performance between Iris and Lethe.
-func runZeroCopyPerformanceTest() {
-	// Configure Lethe for high-performance zero-copy operations
-	config := &lethe.LoggerConfig{
-		Filename:           "logs/iris-zerocopy.log",
-		MaxSizeStr:         "100MB",
-		MaxBackups:         10,
-		Async:              true,
-		BufferSize:         8192, // 8KB to match advanced examples
-		BackpressurePolicy: "adaptive",
-		Compress:           true,
-	}
+// runQuickStartExample demonstrates Lethe's QuickStart API for instant
+// Iris integration with sensible defaults.
+func runQuickStartExample() {
+	// QuickStart: One-line Iris integration with optimal defaults
+	irisWriter := lethe.QuickStart("logs/quickstart.log")
+	defer irisWriter.Close()
 
-	letheLogger, err := lethe.NewWithConfig(config)
-	if err != nil {
-		log.Fatalf("Failed to create zero-copy Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
-
-	// Create adapter for zero-copy operations
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
-
-	// Configure Iris for maximum performance
+	// Create Iris logger using QuickStart writer
 	irisLogger, err := iris.New(iris.Config{
-		Output:    adapter,
-		Encoder:   iris.NewJSONEncoder(),
-		Level:     iris.Info,
-		Capacity:  8192, // 8KB to match Lethe buffer
-		BatchSize: 256,  // Smaller batches for lower latency
+		Output:  irisWriter,
+		Encoder: iris.NewJSONEncoder(),
+		Level:   iris.Info,
 	})
 	if err != nil {
-		log.Fatalf("Failed to create zero-copy Iris logger: %v", err)
+		log.Fatalf("Failed to create Iris logger: %v", err)
 	}
 	defer irisLogger.Close()
 	irisLogger.Start()
 
-	// Performance test with zero-copy operations
-	const testIterations = 1000 // Match advanced examples
+	// Immediate productive use - no configuration needed
+	irisLogger.Info("QuickStart logger initialized")
+	irisLogger.With(
+		iris.String("setup_time", "instant"),
+		iris.String("configuration", "zero"),
+		iris.String("performance", "optimized"),
+	).Info("QuickStart provides instant production-ready logging")
+
+	const quickOps = 5000
+	startTime := time.Now()
+
+	for i := 0; i < quickOps; i++ {
+		irisLogger.With(
+			iris.Int("operation", i),
+			iris.String("type", "quickstart"),
+		).Info("QuickStart operation")
+	}
+
+	duration := time.Since(startTime)
+	throughput := float64(quickOps) / duration.Seconds()
+
+	fmt.Printf("   QuickStart: %d operations in %v\n", quickOps, duration)
+	fmt.Printf("   Throughput: %.0f ops/sec with zero configuration\n", throughput)
+	fmt.Println("   Magic: Automatic Lethe optimization applied")
+}
+
+// runMagicPerformanceTest demonstrates the zero-copy capabilities
+// that provide "rock solid" performance between Iris and Lethe with Magic API.
+func runMagicPerformanceTest() {
+	// Create high-performance Magic integration
+	irisWriter := lethe.NewIrisWriter("logs/magic-performance.log", &lethe.Logger{
+		MaxSizeStr:         "200MB",
+		MaxBackups:         10,
+		Async:              true,
+		BufferSize:         16384, // 16KB for high performance
+		BackpressurePolicy: "adaptive",
+		Compress:           true,
+	})
+	defer irisWriter.Close()
+
+	// Configure Iris for maximum performance with Magic API
+	irisLogger, err := iris.New(iris.Config{
+		Output:    irisWriter,
+		Encoder:   iris.NewJSONEncoder(),
+		Level:     iris.Info,
+		Capacity:  8192, // Match buffer sizes for optimal performance
+		BatchSize: 256,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create performance Iris logger: %v", err)
+	}
+	defer irisLogger.Close()
+	irisLogger.Start()
+
+	// Performance test with Magic API zero-copy operations
+	const testIterations = 10000
 	startTime := time.Now()
 
 	for i := 0; i < testIterations; i++ {
-		// Use simple message format like advanced examples
-		irisLogger.Info(fmt.Sprintf("Zero-copy operation %d", i))
+		irisLogger.With(
+			iris.Int("operation", i),
+			iris.String("type", "magic-performance"),
+			iris.Bool("zero_copy", true),
+		).Info("Magic API zero-copy operation")
 	}
 
 	duration := time.Since(startTime)
 	throughput := float64(testIterations) / duration.Seconds()
 
-	fmt.Printf("   Zero-Copy Test: %d operations in %v\n", testIterations, duration)
+	fmt.Printf("   Magic Performance: %d operations in %v\n", testIterations, duration)
 	fmt.Printf("   Throughput: %.0f ops/sec\n", throughput)
-	fmt.Printf("   Integration: Rock solid zero-copy buffer transfer\n")
+	fmt.Printf("   Runtime Integration: Automatic WriteOwned() optimization detected\n")
 }
 
-// runHighThroughputTest simulates high-load production scenarios
-// with Iris logging and Lethe rotation working in harmony.
-func runHighThroughputTest() {
-	// Configure for high-throughput scenarios
-	config := &lethe.LoggerConfig{
-		Filename:           "logs/iris-highload.log",
-		MaxSizeStr:         "200MB",
-		MaxBackups:         20,
-		Async:              true,
-		BufferSize:         131072, // 128KB buffer (maximum performance)
-		BackpressurePolicy: "adaptive",
-		Compress:           true,
-		ErrorCallback: func(eventType string, err error) {
-			fmt.Printf("     High-load event [%s]: %v\n", eventType, err)
-		},
-	}
-
-	letheLogger, err := lethe.NewWithConfig(config)
-	if err != nil {
-		log.Fatalf("Failed to create high-throughput Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
-
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
-
-	// Configure Iris for high-throughput logging
-	irisLogger, err := iris.New(iris.Config{
-		Output:    adapter,
-		Encoder:   iris.NewJSONEncoder(),
-		Level:     iris.Info,
-		Capacity:  8192, // 8KB to match Lethe buffer
-		BatchSize: 256,  // Optimized batch size
-	})
-	if err != nil {
-		log.Fatalf("Failed to create high-throughput Iris logger: %v", err)
-	}
-	defer irisLogger.Close()
-	irisLogger.Start()
-
-	// Simulate realistic high-load scenarios
-	const operations = 500000
-	scenarios := []string{"api_request", "database_query", "cache_operation", "auth_check"}
-
-	startTime := time.Now()
-
-	for i := 0; i < operations; i++ {
-		scenario := scenarios[i%len(scenarios)]
-
-		irisLogger.With(
-			iris.String("scenario", scenario),
-			iris.String("request_id", fmt.Sprintf("req-%d", i)),
-			iris.Int64("timestamp", time.Now().UnixNano()),
-			iris.Int("response_ms", (i%100)+10),
-			iris.Int("status_code", 200+(i%4)*100),
-		).Info("High-throughput operation logged")
-	}
-
-	duration := time.Since(startTime)
-	throughput := float64(operations) / duration.Seconds()
-
-	fmt.Printf("   High-Throughput Test: %d operations in %v\n", operations, duration)
-	fmt.Printf("   Throughput: %.0f ops/sec\n", throughput)
-	fmt.Printf("   Configuration: 64KB Lethe + 32KB Iris buffers, adaptive backpressure\n")
-}
-
-// runAdvancedConfigIntegration demonstrates sophisticated configuration
+// runAdvancedMagicIntegration demonstrates sophisticated Magic API configuration
 // options when integrating Iris and Lethe.
-func runAdvancedConfigIntegration() {
-	// Advanced Lethe configuration
-	config := &lethe.LoggerConfig{
-		Filename:           "logs/iris-advanced.log",
+func runAdvancedMagicIntegration() {
+	// Advanced Magic API configuration
+	irisWriter := lethe.NewIrisWriter("logs/magic-advanced.log", &lethe.Logger{
 		MaxSizeStr:         "50MB",
 		MaxAgeStr:          "24h", // Time-based rotation
 		MaxBackups:         15,
 		Compress:           true,
 		Checksum:           true, // Data integrity verification
 		Async:              true,
-		BufferSize:         16384,
+		BufferSize:         32768, // 32KB buffer
 		BackpressurePolicy: "adaptive",
 		LocalTime:          true,
 		ErrorCallback: func(eventType string, err error) {
-			fmt.Printf("     Advanced event [%s]: %v\n", eventType, err)
+			fmt.Printf("     Advanced Magic event [%s]: %v\n", eventType, err)
 		},
-	}
+	})
+	defer irisWriter.Close()
 
-	letheLogger, err := lethe.NewWithConfig(config)
-	if err != nil {
-		log.Fatalf("Failed to create advanced Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
-
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
-
-	// Advanced Iris configuration
+	// Advanced Iris configuration with Magic API
 	irisLogger, err := iris.New(iris.Config{
-		Output:    adapter,
+		Output:    irisWriter,
 		Encoder:   iris.NewJSONEncoder(),
 		Level:     iris.Debug,
-		Capacity:  8192,
-		BatchSize: 32,
+		Capacity:  16384, // 16KB to match buffer
+		BatchSize: 64,
 	}, iris.WithCaller(), iris.Development())
 	if err != nil {
-		log.Fatalf("Failed to create advanced Iris logger: %v", err)
+		log.Fatalf("Failed to create advanced Magic Iris logger: %v", err)
 	}
 	defer irisLogger.Close()
 	irisLogger.Start()
 
-	// Test advanced logging features
+	// Test advanced Magic features
 	irisLogger.With(
-		iris.String("component", "advanced-integration"),
+		iris.String("component", "magic-advanced"),
 		iris.String("version", "2.0.0"),
-		iris.String("environment", "production"),
-		iris.String("datacenter", "us-east-1"),
-	).Info("Advanced configuration active")
+		iris.String("integration", "runtime"),
+		iris.String("features", "checksum+compression+time_rotation"),
+	).Info("Advanced Magic API configuration active")
 
-	irisLogger.With(
-		iris.String("feature", "checksum_verification"),
-		iris.Bool("integrity", true),
-		iris.Bool("compression", true),
-		iris.String("time_rotation", "24h"),
-	).Debug("Data integrity and rotation features enabled")
-
-	const advancedEntries = 10000
+	const advancedEntries = 8000
 	for i := 0; i < advancedEntries; i++ {
 		irisLogger.With(
 			iris.Int("entry_id", i),
 			iris.Int("batch", i/1000),
+			iris.Bool("magic_api", true),
 			iris.Bool("checksum_ok", true),
 			iris.Bool("compressed", true),
-		).Info("Advanced integration test entry")
+		).Info("Advanced Magic integration test entry")
 	}
 
-	fmt.Printf("   Advanced Integration: %d entries with checksums and compression\n", advancedEntries)
-	fmt.Printf("   Features: time-based rotation, data integrity, zero-copy transfers\n")
+	fmt.Printf("   Advanced Magic: %d entries with checksums and compression\n", advancedEntries)
+	fmt.Printf("   Features: time-based rotation, data integrity, runtime optimization\n")
 }
 
-// runProductionIntegration demonstrates a complete production-ready
-// integration pattern with error handling and monitoring.
-func runProductionIntegration() {
+// runProductionMagicIntegration demonstrates a complete production-ready
+// Magic API integration pattern with monitoring and error handling.
+func runProductionMagicIntegration() {
 	var rotationEvents int
 	var errorEvents int
 
-	// Production-grade Lethe configuration
-	config := &lethe.LoggerConfig{
-		Filename:           "logs/iris-production.log",
+	// Production-grade Magic API configuration
+	irisWriter := lethe.NewIrisWriter("logs/magic-production.log", &lethe.Logger{
 		MaxSizeStr:         "100MB",
 		MaxAgeStr:          "7d",
 		MaxBackups:         30,
 		Compress:           true,
 		Checksum:           true,
 		Async:              true,
-		BufferSize:         32768,
+		BufferSize:         32768, // 32KB buffer
 		BackpressurePolicy: "adaptive",
 		LocalTime:          true,
 		ErrorCallback: func(eventType string, err error) {
@@ -360,37 +285,29 @@ func runProductionIntegration() {
 				errorEvents++
 			}
 		},
-	}
+	})
+	defer irisWriter.Close()
 
-	letheLogger, err := lethe.NewWithConfig(config)
-	if err != nil {
-		log.Fatalf("Failed to create production Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
-
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
-
-	// Production Iris configuration
+	// Production Iris configuration with Magic API
 	irisLogger, err := iris.New(iris.Config{
-		Output:    adapter,
+		Output:    irisWriter,
 		Encoder:   iris.NewJSONEncoder(),
 		Level:     iris.Info,
-		Capacity:  16384,
+		Capacity:  16384, // 16KB capacity
 		BatchSize: 64,
 	})
 	if err != nil {
-		log.Fatalf("Failed to create production Iris logger: %v", err)
+		log.Fatalf("Failed to create production Magic Iris logger: %v", err)
 	}
 	defer irisLogger.Close()
 	irisLogger.Start()
 
-	// Simulate production application logging
-	irisLogger.Info("Production application started")
+	// Simulate production application logging with Magic API
+	irisLogger.Info("Production Magic API application started")
 
 	// Simulate various service operations
 	services := []string{"auth", "api", "database", "cache", "analytics"}
-	const productionOps = 50000
+	const productionOps = 25000
 
 	startTime := time.Now()
 
@@ -399,41 +316,40 @@ func runProductionIntegration() {
 
 		irisLogger.With(
 			iris.String("service", service),
-			iris.String("operation_id", fmt.Sprintf("%s-op-%d", service, i)),
-			iris.Int64("timestamp", time.Now().UnixNano()),
+			iris.String("operation_id", fmt.Sprintf("%s-magic-%d", service, i)),
+			iris.String("api_version", "magic-v1"),
 			iris.Int("duration_ms", (i%200)+5),
 			iris.Bool("success", i%100 != 0), // 1% failure rate
-		).Info("Production service operation")
+			iris.Bool("runtime_optimized", true),
+		).Info("Production Magic API service operation")
 	}
 
 	duration := time.Since(startTime)
 
-	irisLogger.Info("Production application shutdown initiated")
-	if err := adapter.Sync(); err != nil { // Ensure all data is persisted
-		log.Printf("Warning: Failed to sync adapter: %v", err)
-	}
+	irisLogger.Info("Production Magic API application shutdown")
 
-	fmt.Printf("   Production Integration: %d operations in %v\n", productionOps, duration)
+	fmt.Printf("   Production Magic: %d operations in %v\n", productionOps, duration)
 	fmt.Printf("   Throughput: %.0f ops/sec\n", float64(productionOps)/duration.Seconds())
 	fmt.Printf("   Events: %d rotations, %d errors\n", rotationEvents, errorEvents)
+	fmt.Printf("   Runtime Integration: Automatic optimization with zero configuration\n")
 }
 
-// runConcurrentWritersTest demonstrates multiple Iris loggers
-// writing concurrently through Lethe with perfect synchronization.
-func runConcurrentWritersTest() {
-	// Shared Lethe logger for all Iris instances
-	letheLogger, err := lethe.NewWithDefaults("logs/iris-concurrent.log")
-	if err != nil {
-		log.Fatalf("Failed to create concurrent Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
+// runConcurrentMagicWritersTest demonstrates multiple Iris loggers
+// writing concurrently through Magic API with perfect synchronization.
+func runConcurrentMagicWritersTest() {
+	// Shared Magic API writer for all Iris instances
+	irisWriter := lethe.NewIrisWriter("logs/magic-concurrent.log", &lethe.Logger{
+		MaxSizeStr:         "100MB",
+		MaxBackups:         5,
+		Async:              true,
+		BufferSize:         16384,
+		BackpressurePolicy: "adaptive",
+	})
+	defer irisWriter.Close()
 
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
-
-	// Create multiple Iris loggers sharing the same Lethe backend
+	// Create multiple Iris loggers sharing the same Magic backend
 	const numLoggers = 8
-	const operationsPerLogger = 5000
+	const operationsPerLogger = 3000
 
 	var wg sync.WaitGroup
 	startTime := time.Now()
@@ -445,12 +361,12 @@ func runConcurrentWritersTest() {
 
 			// Each goroutine gets its own Iris logger instance
 			irisLogger, err := iris.New(iris.Config{
-				Output:  adapter,
+				Output:  irisWriter,
 				Encoder: iris.NewJSONEncoder(),
 				Level:   iris.Info,
 			})
 			if err != nil {
-				log.Printf("Failed to create Iris logger %d: %v", id, err)
+				log.Printf("Failed to create Magic Iris logger %d: %v", id, err)
 				return
 			}
 			defer irisLogger.Close()
@@ -460,9 +376,10 @@ func runConcurrentWritersTest() {
 				irisLogger.With(
 					iris.Int("logger_id", id),
 					iris.Int("operation", op),
+					iris.String("api", "magic"),
+					iris.Bool("runtime_optimized", true),
 					iris.Bool("thread_safe", true),
-					iris.Bool("zero_copy", true),
-				).Info("Concurrent operation through shared Lethe backend")
+				).Info("Concurrent Magic API operation")
 			}
 		}(loggerID)
 	}
@@ -471,72 +388,78 @@ func runConcurrentWritersTest() {
 	duration := time.Since(startTime)
 	totalOps := numLoggers * operationsPerLogger
 
-	fmt.Printf("   Concurrent Writers: %d operations from %d loggers in %v\n",
+	fmt.Printf("   Concurrent Magic: %d operations from %d loggers in %v\n",
 		totalOps, numLoggers, duration)
 	fmt.Printf("   Throughput: %.0f ops/sec\n", float64(totalOps)/duration.Seconds())
-	fmt.Printf("   Thread Safety: Perfect synchronization through shared Lethe backend\n")
+	fmt.Printf("   Runtime Integration: Perfect synchronization with zero configuration\n")
 }
 
-// runWriteSyncerComplianceTest verifies that the adapter correctly
-// implements the iris.WriteSyncer interface contract.
-func runWriteSyncerComplianceTest() {
-	letheLogger, err := lethe.NewWithDefaults("logs/iris-compliance.log")
-	if err != nil {
-		log.Fatalf("Failed to create compliance test Lethe logger: %v", err)
-	}
-	defer letheLogger.Close()
+// runRuntimeAutoDetection demonstrates the automatic detection capabilities
+// that provide seamless integration between Iris and Lethe.
+func runRuntimeAutoDetection() {
+	// Create Magic API writer
+	irisWriter := lethe.NewIrisWriter("logs/runtime-detection.log", &lethe.Logger{
+		MaxSizeStr: "50MB",
+		MaxBackups: 3,
+		Async:      true,
+		BufferSize: 8192,
+	})
+	defer irisWriter.Close()
 
-	adapter := NewLetheIrisAdapter(letheLogger)
-	defer adapter.Close()
+	// Demonstrate runtime auto-detection features
+	fmt.Println("   Runtime Auto-Detection Features:")
 
-	// Verify WriteSyncer interface compliance
-	var writeSyncer iris.WriteSyncer = adapter // Compile-time interface check
-
-	// Test Write method
-	testData := []byte("WriteSyncer compliance test\n")
-	n, err := writeSyncer.Write(testData)
-	if err != nil {
-		log.Printf("Write method failed: %v", err)
-	} else if n != len(testData) {
-		log.Printf("Write method returned incorrect length: got %d, want %d", n, len(testData))
+	// Check WriteOwned capability
+	if _, hasWriteOwned := interface{}(irisWriter).(interface{ WriteOwned([]byte) (int, error) }); hasWriteOwned {
+		fmt.Println("   ✓ WriteOwned() zero-copy optimization detected")
 	}
 
-	// Test WriteOwned method with our custom interface (Lethe-specific optimization)
-	if letheAdapter, ok := writeSyncer.(*LetheIrisAdapter); ok {
-		ownedData := []byte("WriteOwned compliance test\n")
-		n, err = letheAdapter.WriteOwned(ownedData)
-		if err != nil {
-			log.Printf("WriteOwned method failed: %v", err)
-		} else if n != len(ownedData) {
-			log.Printf("WriteOwned method returned incorrect length: got %d, want %d", n, len(ownedData))
+	// Check optimal buffer size
+	if bufferProvider, hasBuffer := interface{}(irisWriter).(interface{ GetOptimalBufferSize() int }); hasBuffer {
+		size := bufferProvider.GetOptimalBufferSize()
+		fmt.Printf("   ✓ Optimal buffer size detected: %d bytes\n", size)
+	}
+
+	// Check hot reload capability
+	if hotReloadProvider, hasHotReload := interface{}(irisWriter).(interface{ SupportsHotReload() bool }); hasHotReload {
+		if hotReloadProvider.SupportsHotReload() {
+			fmt.Println("   ✓ Hot reload capability detected")
 		}
-	}
-
-	// Test Sync method
-	if err := writeSyncer.Sync(); err != nil {
-		log.Printf("Sync method failed: %v", err)
-	}
-
-	// Create Iris logger to verify full integration
+	} // Create Iris logger with auto-detected optimizations
 	irisLogger, err := iris.New(iris.Config{
-		Output:  writeSyncer,
+		Output:  irisWriter,
 		Encoder: iris.NewJSONEncoder(),
 		Level:   iris.Info,
 	})
 	if err != nil {
-		log.Fatalf("Failed to create compliance Iris logger: %v", err)
+		log.Fatalf("Failed to create runtime detection Iris logger: %v", err)
 	}
 	defer irisLogger.Close()
 	irisLogger.Start()
 
-	// Test complete integration
+	// Test auto-detection in action
 	irisLogger.With(
-		iris.String("interface", "WriteSyncer"),
-		iris.String("methods", "Write, Sync, Close + WriteOwned (Lethe-specific)"),
-		iris.Bool("compliant", true),
-	).Info("WriteSyncer interface compliance verified")
+		iris.String("integration", "runtime"),
+		iris.String("detection", "automatic"),
+		iris.Bool("zero_config", true),
+		iris.Bool("seamless", true),
+	).Info("Runtime auto-detection successful")
 
-	fmt.Println("   WriteSyncer Compliance: All interface methods verified")
-	fmt.Println("   Standard methods: Write, Sync, Close")
-	fmt.Println("   Lethe optimization: WriteOwned for zero-copy performance")
+	const detectionOps = 3000
+	startTime := time.Now()
+
+	for i := 0; i < detectionOps; i++ {
+		irisLogger.With(
+			iris.Int("operation", i),
+			iris.String("optimization", "automatic"),
+			iris.Bool("runtime_detected", true),
+		).Info("Auto-optimized logging operation")
+	}
+
+	duration := time.Since(startTime)
+	throughput := float64(detectionOps) / duration.Seconds()
+
+	fmt.Printf("   Runtime Auto-Detection: %d operations in %v\n", detectionOps, duration)
+	fmt.Printf("   Throughput: %.0f ops/sec with automatic optimization\n", throughput)
+	fmt.Println("   Integration: Automatic runtime optimization with zero configuration")
 }

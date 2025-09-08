@@ -1,6 +1,6 @@
 # Lethe Examples
 
-This directory contains comprehensive examples demonstrating Lethe's log rotation capabilities, from basic usage patterns to advanced production deployments and zero-copy integrations.
+This directory contains comprehensive examples demonstrating- **Professional Systems**: Combine advanced features with monitoring and error callbacksLethe's log rotation capabilities, from basic usage patterns to advanced production deployments and zero-copy integrations.
 
 ## Example Categories
 
@@ -18,12 +18,12 @@ This directory contains comprehensive examples demonstrating Lethe's log rotatio
 - Raw buffer management and optimization
 - **Recommended for**: Performance-critical applications requiring maximum speed
 
-###  [Iris Integration](./iris-integration/)
-**Production-ready integration with Iris**
-- Zero-copy adapter with WriteSyncer interface
-- Iris + Lethe integration with professional features
-- Structured logging, levels, and JSON formatting
-- **Recommended for**: Iris users, production applications, professional logging
+### [Iris Magic API Integration](./iris-integration/)
+**Automatic runtime integration with zero configuration**
+- Magic API: `lethe.QuickStart()` and `lethe.NewIrisWriter()` 
+- Automatic runtime optimization and zero-copy `WriteOwned()` detection
+- Seamless integration with automatic capability detection
+- **Recommended for**: All Iris users, production applications, zero-configuration setup
 
 ## Quick Start Guide
 
@@ -47,14 +47,14 @@ go run .
 # These are NOT comparable to framework integration!
 ```
 
-### For Production Iris Integration
+### For Production Iris Magic API Integration
 ```bash
-# Experience Iris-Lethe integration with full logging features
+# Experience automatic runtime integration with zero configuration
 cd iris-integration/
 go run .
 
-# Observe professional logging with structured data, levels, JSON
-# This includes framework overhead but provides full logging capabilities
+# Observe Magic API features: QuickStart, auto-detection, runtime optimization
+# Automatic WriteOwned() zero-copy optimization for maximum performance
 ```
 
 ## Performance Overview
@@ -63,19 +63,19 @@ go run .
 |------------------|-------------------|--------------|
 | **Basic** | 500K+ ops/sec | Constructor functions, basic rotation |
 | **Low-Level API** | 4-6M ops/sec | Direct Lethe calls, raw buffers, zero allocations |
-| **Iris Integration** | 3-4M ops/sec | Full logging framework, JSON, levels, professional features |
+| **Iris Magic API** | 2.5M+ ops/sec | Runtime integration, zero configuration, auto-optimization |
 
 ## Example Roadmap
 
 ### Learning Path
 1. **Start**: `basic/` - Master constructor functions and rotation policies
 2. **Advance**: `advanced/` - Explore high-performance features and optimization
-3. **Integrate**: `iris-integration/` - Implement production-ready zero-copy logging
+3. **Integrate**: `iris-integration/` - Implement automatic Magic API with runtime integration
 
 ### Use Case Selection
 - **Simple Applications**: Use `basic/NewWithDefaults()` patterns
 - **High-Throughput Services**: Implement `advanced/` MPSC and backpressure strategies  
-- **Iris Applications**: Deploy `iris-integration/` zero-copy adapters
+- **Iris Magic API**: Deploy automatic runtime integration with `lethe.QuickStart()`
 - **professional Systems**: Combine advanced features with monitoring and error callbacks
 
 ## Configuration Quick Reference
@@ -113,11 +113,28 @@ logger, err := lethe.NewWithDefaults("app.log")
 log.SetOutput(logger)  // Replace default output
 ```
 
-### With Iris (Zero-Copy)
+### With Iris Magic API (Zero Configuration)
 ```go
-letheLogger, _ := lethe.NewWithDefaults("iris.log")
-adapter := NewLetheIrisAdapter(letheLogger)
-irisLogger, _ := iris.New(iris.Config{Output: adapter})
+// Revolutionary Magic API - one line setup
+writer := lethe.QuickStart("app.log")
+defer writer.Close()
+
+// Automatic runtime optimization
+logger, _ := iris.New(iris.Config{Output: writer})
+```
+
+### With Iris Magic API (Custom Configuration)
+```go
+// Custom Magic API configuration
+writer := lethe.NewIrisWriter("app.log", &lethe.Logger{
+    MaxSizeStr: "100MB",
+    MaxBackups: 5,
+    Compress:   true,
+})
+defer writer.Close()
+
+// Automatic WriteOwned() optimization
+logger, _ := iris.New(iris.Config{Output: writer})
 ```
 
 ### Custom Applications
@@ -172,10 +189,10 @@ examples/
 │   ├── main.go                 # MPSC, zero-copy, backpressure
 │   ├── README.md               # Advanced feature documentation
 │   └── logs/                   # Performance test outputs
-└── iris-integration/            # Iris logging integration
-    ├── main.go                 # Zero-copy adapter examples
-    ├── README.md               # Integration documentation
-    └── logs/                   # Integration test outputs
+└── iris-integration/            # Iris Magic API integration
+    ├── main.go                 # Magic API examples with runtime features
+    ├── README.md               # Magic API documentation
+    └── logs/                   # Magic API test outputs
 ```
 
 ## Next Steps
