@@ -49,6 +49,12 @@ test_*.log
 dist/
 build/
 
+# Example binaries (avoid conflicts with directory names)
+examples/basic/basic
+examples/hot_reload/hot_reload
+examples/iris-integration/iris-integration
+examples/low-level-api/low-level-api
+
 # Environment files
 .env
 .env.local

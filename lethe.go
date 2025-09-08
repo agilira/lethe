@@ -130,6 +130,9 @@ type Logger struct {
 	// The consumer automatically adapts to write velocity to optimize performance.
 	AdaptiveFlush bool `json:"adaptive_flush"`
 
+	// Thread-safe adaptive flush for hot reload (minimal race condition fix)
+	adaptiveFlushAtomic atomic.Bool
+
 	// Internal state (all atomic - ZERO LOCKS!)
 	currentFile  atomic.Pointer[os.File] // Current log file
 	bytesWritten atomic.Uint64           // Total bytes written
@@ -506,6 +509,9 @@ func NewWithConfig(config *LoggerConfig) (*Logger, error) {
 
 	// Initialize time cache for performance
 	logger.timeCache = timecache.NewWithResolution(time.Millisecond)
+
+	// Initialize atomic fields for thread-safe hot reload
+	logger.adaptiveFlushAtomic.Store(logger.AdaptiveFlush)
 
 	return logger, nil
 }

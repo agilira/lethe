@@ -52,7 +52,11 @@ func TestDynamicConfigWatcher(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create watcher: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		if err := watcher.Stop(); err != nil {
+			t.Logf("Warning: Failed to stop watcher: %v", err)
+		}
+	}()
 
 	// Start watcher
 	if err := watcher.Start(); err != nil {
@@ -205,7 +209,11 @@ func TestEnableDynamicConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to enable dynamic config: %v", err)
 	}
-	defer watcher.Stop()
+	defer func() {
+		if err := watcher.Stop(); err != nil {
+			t.Logf("Warning: Failed to stop watcher: %v", err)
+		}
+	}()
 
 	// Verify watcher is running
 	if !watcher.IsRunning() {

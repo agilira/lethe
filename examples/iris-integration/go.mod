@@ -2,7 +2,7 @@ module iris-integration
 
 go 1.24.5
 
-replace github.com/agilira/lethe => /home/antonio-giordano/Desktop/GitHub/lethe
+replace github.com/agilira/lethe => ../..
 
 replace github.com/agilira/iris => /home/antonio-giordano/Desktop/GitHub/iris
 

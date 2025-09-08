@@ -205,7 +205,9 @@ func (w *DynamicConfigWatcher) applyConfigToLogger(config *LoggerConfig) error {
 	if config.FlushInterval > 0 {
 		w.logger.FlushInterval = config.FlushInterval
 	}
-	w.logger.AdaptiveFlush = config.AdaptiveFlush
+	// Thread-safe update for hot reload
+	w.logger.adaptiveFlushAtomic.Store(config.AdaptiveFlush)
+	w.logger.AdaptiveFlush = config.AdaptiveFlush // Keep legacy field in sync
 
 	// 8. Error callback (if provided)
 	if config.ErrorCallback != nil {

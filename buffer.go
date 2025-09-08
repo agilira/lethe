@@ -264,7 +264,7 @@ func (c *MPSCConsumer) run() {
 			itemsProcessed := c.flushAll()
 
 			// Adaptive flush timing based on buffer activity
-			if c.logger.AdaptiveFlush {
+			if c.logger.adaptiveFlushAtomic.Load() {
 				c.adjustFlushTiming(itemsProcessed, &emptyRounds)
 			}
 		}

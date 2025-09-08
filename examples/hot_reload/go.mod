@@ -1,4 +1,4 @@
-module lethe-basic-examples
+module lethe-hot-reload-example
 
 go 1.24.5
 

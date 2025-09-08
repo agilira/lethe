@@ -190,9 +190,13 @@ func TestIrisIntegrationPerformance(t *testing.T) {
 	const numWrites = 1000
 	for i := 0; i < numWrites; i++ {
 		if i%2 == 0 {
-			writer.Write(testData)
+			if _, err := writer.Write(testData); err != nil {
+				t.Errorf("Write failed: %v", err)
+			}
 		} else {
-			writer.WriteOwned(testData) // Test zero-copy path
+			if _, err := writer.WriteOwned(testData); err != nil { // Test zero-copy path
+				t.Errorf("WriteOwned failed: %v", err)
+			}
 		}
 	}
 
