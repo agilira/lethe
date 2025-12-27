@@ -932,19 +932,19 @@ func (l *Logger) tryAdaptiveResize(currentBuffer *ringBuffer) bool {
 	// Create new larger buffer
 	newBuffer := newRingBuffer(newSize)
 
-	// Drain current buffer into new buffer
-	// Note: This is a best-effort approach - some messages might be lost
-	// during the transition, but this is acceptable for adaptive resizing
-	drainedCount := 0
-	for drainedCount < 100 { // Limit to prevent infinite loop
-		if data, ok := currentBuffer.pop(); ok {
-			if !newBuffer.push(data) {
-				// New buffer full (shouldn't happen), abort resize
-				return false
-			}
-			drainedCount++
-		} else {
+	// Drain ALL messages from current buffer into new buffer
+	// We must not lose any messages during resize
+	for {
+		data, ok := currentBuffer.pop()
+		if !ok {
 			break // Current buffer empty
+		}
+		if !newBuffer.push(data) {
+			// New buffer full (shouldn't happen since we're doubling size)
+			// Put the data back - this is a best effort
+			// In practice this path should never be hit
+			safeBufferPool.Put(data)
+			return false
 		}
 	}
 

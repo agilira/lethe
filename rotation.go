@@ -36,6 +36,9 @@ func (l *Logger) initFile() error {
 		return err
 	}
 
+	// Cleanup orphan .tmp files from interrupted rotations (crash recovery)
+	l.cleanupOrphanTmpFiles(filepath.Dir(sanitizedPath))
+
 	file, err := l.openLogFile(sanitizedPath, fileMode, retryCount, retryDelay)
 	if err != nil {
 		return err
@@ -92,6 +95,38 @@ func (l *Logger) createLogDirectory(sanitizedPath string, retryCount int, retryD
 		return fmt.Errorf("failed to create log directory: %v", err)
 	}
 	return nil
+}
+
+// cleanupOrphanTmpFiles removes orphan .tmp files left from interrupted rotations.
+// This provides crash recovery - if the process died mid-rotation, .tmp files
+// may be left behind. We clean them up on startup to prevent disk space leaks.
+func (l *Logger) cleanupOrphanTmpFiles(dir string) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		// Not critical - just log and continue
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if strings.HasSuffix(name, ".tmp") {
+			tmpPath := filepath.Join(dir, name)
+			// Only remove if file is old enough (at least 1 minute)
+			// to avoid removing files from concurrent rotations
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			if time.Since(info.ModTime()) > time.Minute {
+				if err := os.Remove(tmpPath); err == nil {
+					// Successfully cleaned up orphan file
+				}
+			}
+		}
+	}
 }
 
 // openLogFile opens or creates the log file with retry
@@ -538,6 +573,10 @@ type BackgroundWorkers struct {
 	workers     int
 	activeTasks atomic.Int64 // Track active tasks for synchronization
 	stopOnce    sync.Once    // Ensure stop is called only once
+
+	// Condition variable for efficient waitForCompletion
+	taskCond *sync.Cond
+	condMu   sync.Mutex
 }
 
 // newBackgroundWorkers creates a new worker pool
@@ -550,6 +589,7 @@ func newBackgroundWorkers(numWorkers int) *BackgroundWorkers {
 		taskQueue: make(chan BackgroundTask, 100), // Buffered channel
 		workers:   numWorkers,
 	}
+	bg.taskCond = sync.NewCond(&bg.condMu)
 
 	// Start workers
 	for i := 0; i < numWorkers; i++ {
@@ -578,7 +618,11 @@ func (bg *BackgroundWorkers) worker() {
 func (bg *BackgroundWorkers) processTask(task BackgroundTask) {
 	// Increment active task counter
 	bg.activeTasks.Add(1)
-	defer bg.activeTasks.Add(-1)
+	defer func() {
+		bg.activeTasks.Add(-1)
+		// Signal any waiters that a task completed
+		bg.taskCond.Broadcast()
+	}()
 
 	switch task.TaskType {
 	case "cleanup":
@@ -600,10 +644,13 @@ func (bg *BackgroundWorkers) stop() {
 }
 
 // waitForCompletion waits for all active tasks to complete
+// Uses condition variable instead of busy-wait polling
 func (bg *BackgroundWorkers) waitForCompletion() {
-	// Wait until no active tasks remain
+	bg.condMu.Lock()
+	defer bg.condMu.Unlock()
+
 	for bg.activeTasks.Load() > 0 {
-		time.Sleep(1 * time.Millisecond)
+		bg.taskCond.Wait()
 	}
 }
 

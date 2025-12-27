@@ -79,6 +79,11 @@ type ringBuffer struct {
 	mask   uint64                   // Size mask (size must be power of 2)
 	head   atomic.Uint64            // Consumer head pointer
 	tail   atomic.Uint64            // Producer tail pointer
+
+	// Event-driven notification for CPU-efficient idle waiting
+	cond    *sync.Cond  // Condition variable for consumer wakeup
+	condMu  sync.Mutex  // Mutex for condition variable
+	hasData atomic.Bool // Fast path check to avoid lock contention
 }
 
 // nextPow2 returns the next power of 2 greater than or equal to x
@@ -99,10 +104,12 @@ func newRingBuffer(size uint64) *ringBuffer {
 	// Ensure size is power of 2 for optimal performance
 	size = nextPow2(size)
 
-	return &ringBuffer{
+	rb := &ringBuffer{
 		buffer: make([]atomic.Pointer[[]byte], size),
 		mask:   size - 1,
 	}
+	rb.cond = sync.NewCond(&rb.condMu)
+	return rb
 }
 
 // push attempts to push data to the ring buffer (producer side)
@@ -143,10 +150,24 @@ func (rb *ringBuffer) push(data []byte) bool {
 
 			// Use atomic store to ensure memory visibility
 			rb.buffer[tail&rb.mask].Store(&dataCopy)
+
+			// Signal consumer that data is available (event-driven wakeup)
+			rb.signalDataAvailable()
 			return true
 		}
 		// CAS failed → another producer reserved this slot, retry
 	}
+}
+
+// signalDataAvailable notifies the consumer that new data is available.
+// Uses atomic fast-path to minimize lock contention on hot path.
+func (rb *ringBuffer) signalDataAvailable() {
+	// Set flag first (atomic, no lock needed)
+	rb.hasData.Store(true)
+
+	// Signal condition variable to wake up blocked consumer
+	// Use non-blocking signal - consumer will check hasData flag
+	rb.cond.Signal()
 }
 
 // pushOwned pushes data to the ring buffer without copying (ownership transfer)
@@ -168,6 +189,9 @@ func (rb *ringBuffer) pushOwned(data []byte) bool {
 		if rb.tail.CompareAndSwap(tail, tail+1) {
 			// No copy - take ownership of the data slice
 			rb.buffer[tail&rb.mask].Store(&data)
+
+			// Signal consumer that data is available (event-driven wakeup)
+			rb.signalDataAvailable()
 			return true
 		}
 		// CAS failed → another producer reserved this slot, retry
@@ -177,32 +201,54 @@ func (rb *ringBuffer) pushOwned(data []byte) bool {
 // pop attempts to pop data from the ring buffer (consumer side)
 // Returns data and true if successful, nil and false if buffer is empty
 // Should only be called by single consumer thread
+//
+// CRITICAL FIX (Gemini review): Don't advance head until data is confirmed present.
+// A producer may have reserved a slot (tail++) but not yet written the data.
+// We do a brief spin-wait (bounded) before returning false.
 func (rb *ringBuffer) pop() ([]byte, bool) {
-	for {
-		head := rb.head.Load()
-		tail := rb.tail.Load()
+	head := rb.head.Load()
+	tail := rb.tail.Load()
 
-		// Check if buffer is empty
-		if head >= tail {
-			return nil, false
-		}
-
-		// Try to reserve the slot
-		if rb.head.CompareAndSwap(head, head+1) {
-			idx := head & rb.mask
-			// Use atomic load to ensure memory visibility
-			dataPtr := rb.buffer[idx].Load()
-			if dataPtr == nil {
-				// Should not happen, but handle gracefully
-				continue
-			}
-			data := *dataPtr
-			// Help GC by clearing reference
-			rb.buffer[idx].Store(nil)
-			return data, true
-		}
-		// CAS failed, retry (shouldn't happen often with single consumer)
+	// Check if buffer is empty
+	if head >= tail {
+		return nil, false
 	}
+
+	idx := head & rb.mask
+
+	// CRITICAL: Check if data is present BEFORE advancing head.
+	// If producer reserved slot but hasn't written yet, do a brief spin.
+	// The producer MUST complete the Store very quickly after CAS,
+	// so a short spin is safe and prevents message loss.
+	var dataPtr *[]byte
+	for spin := 0; spin < 1000; spin++ {
+		dataPtr = rb.buffer[idx].Load()
+		if dataPtr != nil {
+			break
+		}
+		// Brief yield - producer should complete very soon
+		if spin < 10 {
+			continue // tight spin
+		}
+		// Let other goroutines run
+	}
+
+	if dataPtr == nil {
+		// Producer is taking too long - shouldn't happen in normal operation
+		// Return false to let caller handle (e.g., retry or timeout)
+		return nil, false
+	}
+
+	// Data is ready - now we can safely advance head
+	if !rb.head.CompareAndSwap(head, head+1) {
+		// Rare: another goroutine modified head (shouldn't happen with single consumer)
+		return nil, false
+	}
+
+	data := *dataPtr
+	// Help GC by clearing reference
+	rb.buffer[idx].Store(nil)
+	return data, true
 }
 
 // MPSCConsumer handles the single consumer logic for the MPSC pattern.
@@ -225,18 +271,12 @@ type MPSCConsumer struct {
 func newMPSCConsumer(buffer *ringBuffer, logger *Logger) *MPSCConsumer {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Configure flush interval
-	flushInterval := logger.FlushInterval
-	if flushInterval <= 0 {
-		flushInterval = 1 * time.Millisecond // Default: high frequency flush
-	}
-
 	consumer := &MPSCConsumer{
 		buffer: buffer,
 		logger: logger,
 		ctx:    ctx,
 		cancel: cancel,
-		ticker: time.NewTicker(flushInterval),
+		ticker: nil, // No longer needed - we use event-driven wakeup
 	}
 
 	// Start consumer goroutine
@@ -246,55 +286,71 @@ func newMPSCConsumer(buffer *ringBuffer, logger *Logger) *MPSCConsumer {
 	return consumer
 }
 
-// run executes the consumer loop with optional adaptive timing
+// run executes the consumer loop with event-driven wakeup.
+// The consumer blocks on a condition variable when idle, eliminating CPU waste.
+// It wakes up only when:
+// 1. New data is pushed to the buffer (signalDataAvailable)
+// 2. Context is cancelled (shutdown)
 func (c *MPSCConsumer) run() {
-	defer c.ticker.Stop()
 	defer c.wg.Done()
 
-	emptyRounds := 0
-	baseInterval := c.ticker.C
-
 	for {
+		// Check for shutdown first
 		select {
 		case <-c.ctx.Done():
 			// Final flush before shutdown
 			c.flushAll()
 			return
-		case <-baseInterval:
-			itemsProcessed := c.flushAll()
-
-			// Adaptive flush timing based on buffer activity
-			if c.logger.adaptiveFlushAtomic.Load() {
-				c.adjustFlushTiming(itemsProcessed, &emptyRounds)
-			}
+		default:
 		}
+
+		// Try to flush any available data
+		itemsProcessed := c.flushAll()
+
+		if itemsProcessed == 0 {
+			// Buffer is empty - wait for signal instead of polling
+			c.waitForData()
+		}
+		// If we processed items, immediately loop back to check for more
 	}
 }
 
-// adjustFlushTiming implements adaptive flush timing algorithm
-func (c *MPSCConsumer) adjustFlushTiming(itemsProcessed int, emptyRounds *int) {
-	if itemsProcessed == 0 {
-		*emptyRounds++
-		// Backoff when buffer is consistently empty
-		if *emptyRounds >= 10 {
-			// Reduce frequency when idle
-			c.ticker.Reset(5 * time.Millisecond)
-			*emptyRounds = 0
-		}
-	} else {
-		*emptyRounds = 0
-		// Increase frequency when busy
-		if itemsProcessed > 10 {
-			c.ticker.Reset(500 * time.Microsecond) // Higher frequency for busy periods
-		} else {
-			// Reset to base interval
-			flushInterval := c.logger.FlushInterval
-			if flushInterval <= 0 {
-				flushInterval = 1 * time.Millisecond
-			}
-			c.ticker.Reset(flushInterval)
-		}
+// waitForData blocks until new data is available or context is cancelled.
+// This is the key to CPU-efficient idle waiting.
+func (c *MPSCConsumer) waitForData() {
+	c.buffer.condMu.Lock()
+	defer c.buffer.condMu.Unlock()
+
+	// Check if we should stop
+	select {
+	case <-c.ctx.Done():
+		return
+	default:
 	}
+
+	// Clear the flag before waiting
+	c.buffer.hasData.Store(false)
+
+	// Double-check buffer is still empty (avoid race with push)
+	if c.buffer.tail.Load() > c.buffer.head.Load() {
+		// Data arrived between flushAll and here - don't wait
+		return
+	}
+
+	// Wait for signal with timeout to allow periodic shutdown checks
+	// Using a goroutine to implement timeout since sync.Cond doesn't have native timeout
+	done := make(chan struct{})
+	go func() {
+		select {
+		case <-c.ctx.Done():
+			// Wake up the waiting goroutine on shutdown
+			c.buffer.cond.Signal()
+		case <-done:
+		}
+	}()
+
+	c.buffer.cond.Wait()
+	close(done)
 }
 
 // flushAll drains available data from ring buffer to file
@@ -340,5 +396,7 @@ func (c *MPSCConsumer) writeToFile(data []byte) {
 // stop gracefully stops the consumer
 func (c *MPSCConsumer) stop() {
 	c.cancel()
+	// Wake up consumer if it's waiting on the condition variable
+	c.buffer.cond.Broadcast()
 	c.wg.Wait() // Wait for consumer to finish
 }

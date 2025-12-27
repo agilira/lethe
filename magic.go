@@ -74,8 +74,8 @@ func (i *IrisIntegration) Write(data []byte) (int, error) {
 // WriteOwned implements zero-copy optimization interface
 // This is the key method that Iris detects for Magic API optimization
 func (i *IrisIntegration) WriteOwned(data []byte) (int, error) {
-	// Use Lethe's optimized write path
-	return i.logger.Write(data)
+	// Use Lethe's zero-copy write path - caller transfers ownership
+	return i.logger.WriteOwned(data)
 }
 
 // Sync implements WriteSyncer interface
