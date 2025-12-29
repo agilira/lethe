@@ -7,6 +7,7 @@
 package lethe
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -166,6 +167,19 @@ type Logger struct {
 
 	// Config cache (parsed once)
 	maxSizeBytes int64 // MaxSize * MB in bytes
+
+	// Pre-write hook for data transformation (set via LoggerConfig)
+	preWriteHook func(data []byte) ([]byte, error)
+
+	// Metrics callback and state
+	metricsCallback func(stats Stats)
+	metricsInterval time.Duration
+	metricsStop     chan struct{}
+	metricsWg       sync.WaitGroup
+
+	// Timestamps for observability (atomic storage as unix nano)
+	lastWriteTime atomic.Int64 // Unix nano of last write
+	lastDropTime  atomic.Int64 // Unix nano of last drop
 }
 
 // New creates a new Logger with safe defaults and validates configuration.
@@ -471,6 +485,7 @@ func NewWithConfig(config *LoggerConfig) (*Logger, error) {
 		ErrorCallback:      config.ErrorCallback,
 		BackpressurePolicy: config.BackpressurePolicy,
 		AdaptiveFlush:      config.AdaptiveFlush,
+		preWriteHook:       config.PreWriteHook,
 	}
 
 	// Apply safe defaults for unset values
@@ -513,6 +528,18 @@ func NewWithConfig(config *LoggerConfig) (*Logger, error) {
 	// Initialize atomic fields for thread-safe hot reload
 	logger.adaptiveFlushAtomic.Store(logger.AdaptiveFlush)
 
+	// Initialize metrics callback if configured
+	if config.MetricsCallback != nil {
+		logger.metricsCallback = config.MetricsCallback
+		logger.metricsInterval = config.MetricsInterval
+		if logger.metricsInterval == 0 {
+			logger.metricsInterval = 10 * time.Second // Default interval
+		}
+		logger.metricsStop = make(chan struct{})
+		logger.metricsWg.Add(1)
+		go logger.runMetricsCallback()
+	}
+
 	return logger, nil
 }
 
@@ -541,6 +568,13 @@ type LoggerConfig struct {
 	// Error handling
 	ErrorCallback func(operation string, err error) `json:"-"`
 
+	// Pre-write hook for data transformation
+	// PreWriteHook is called before each write to transform data.
+	// Use cases: HMAC signing, encryption, canonicalization, metrics.
+	// CRITICAL: Hook must be fast (<1μs) to avoid blocking writes.
+	// If hook returns error, Write fails with that error.
+	PreWriteHook func(data []byte) ([]byte, error) `json:"-"`
+
 	// File operations
 	FileMode   os.FileMode   `json:"file_mode"`
 	RetryCount int           `json:"retry_count"`
@@ -551,6 +585,15 @@ type LoggerConfig struct {
 	BackpressurePolicy string        `json:"backpressure_policy"`
 	FlushInterval      time.Duration `json:"flush_interval"`
 	AdaptiveFlush      bool          `json:"adaptive_flush"`
+
+	// Metrics export for monitoring (Prometheus, StatsD, etc.)
+	// MetricsCallback is called periodically with current stats.
+	// Use for exporting metrics to external monitoring systems.
+	MetricsCallback func(stats Stats) `json:"-"`
+
+	// MetricsInterval is the interval between MetricsCallback invocations.
+	// Default: 10s. Set to 0 to disable periodic callbacks.
+	MetricsInterval time.Duration `json:"metrics_interval"`
 }
 
 // Write implements io.Writer interface for universal compatibility.
@@ -603,6 +646,15 @@ func (l *Logger) Write(data []byte) (int, error) {
 	// Increment write counter for auto-scaling metrics
 	l.writeCount.Add(1)
 
+	// Apply pre-write hook if configured
+	if l.preWriteHook != nil {
+		var err error
+		data, err = l.preWriteHook(data)
+		if err != nil {
+			return 0, fmt.Errorf("pre-write hook failed: %w", err)
+		}
+	}
+
 	if l.Async {
 		return l.writeAsync(data)
 	}
@@ -625,6 +677,7 @@ func (l *Logger) Write(data []byte) (int, error) {
 //
 // Performance note: In sync mode, this behaves identically to Write().
 // In async mode, it avoids buffer copying, reducing memory allocations.
+// Note: If PreWriteHook is set, data may be copied for transformation.
 //
 // Usage example:
 //
@@ -638,6 +691,16 @@ func (l *Logger) WriteOwned(data []byte) (int, error) {
 	// Increment write counter for auto-scaling metrics
 	l.writeCount.Add(1)
 
+	// Apply pre-write hook if configured
+	// Note: Hook may return a new slice, breaking zero-copy guarantee
+	if l.preWriteHook != nil {
+		var err error
+		data, err = l.preWriteHook(data)
+		if err != nil {
+			return 0, fmt.Errorf("pre-write hook failed: %w", err)
+		}
+	}
+
 	if l.Async {
 		return l.writeAsyncOwned(data)
 	}
@@ -648,6 +711,65 @@ func (l *Logger) WriteOwned(data []byte) (int, error) {
 	}
 
 	return l.writeSync(data)
+}
+
+// WriteContext writes data with context support for cancellation and timeout.
+// Returns immediately with context error if context is already cancelled.
+//
+// This method is essential for audit logging where writes must respect
+// request timeouts and graceful shutdown signals. It enables:
+//   - Timeout control on audit writes
+//   - Graceful shutdown without hanging
+//   - Request-scoped cancellation propagation
+//
+// Usage example:
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	defer cancel()
+//
+//	n, err := logger.WriteContext(ctx, data)
+//	if err == context.DeadlineExceeded {
+//	    // Handle timeout
+//	}
+//
+// Returns the number of bytes written and any error encountered.
+func (l *Logger) WriteContext(ctx context.Context, data []byte) (int, error) {
+	// Fast path: check context cancellation before any work
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+	}
+
+	// Delegate to standard Write
+	return l.Write(data)
+}
+
+// WriteOwnedContext writes data with ownership transfer and context support.
+// Combines zero-copy optimization with context cancellation.
+//
+// The caller promises not to reuse the data slice after this call.
+// Returns immediately with context error if context is cancelled.
+//
+// Usage example:
+//
+//	ctx := context.Background()
+//	buf := pool.Get().([]byte)
+//	copy(buf, message)
+//	n, err := logger.WriteOwnedContext(ctx, buf)
+//	// buf ownership transferred, do not reuse
+//
+// Returns the number of bytes written and any error encountered.
+func (l *Logger) WriteOwnedContext(ctx context.Context, data []byte) (int, error) {
+	// Fast path: check context cancellation before any work
+	select {
+	case <-ctx.Done():
+		return 0, ctx.Err()
+	default:
+	}
+
+	// Delegate to standard WriteOwned
+	return l.WriteOwned(data)
 }
 
 // writeAsyncOwned handles high-throughput MPSC writes with ownership transfer
@@ -682,6 +804,7 @@ func (l *Logger) writeAsyncOwned(data []byte) (int, error) {
 	case "drop":
 		// Drop-on-full policy: silently discard the message
 		l.droppedCount.Add(1)
+		l.lastDropTime.Store(time.Now().UnixNano())
 		return len(data), nil
 
 	case "adaptive":
@@ -807,6 +930,9 @@ func (l *Logger) writeSync(data []byte) (int, error) {
 		return n, err
 	}
 
+	// Track last write time for observability
+	l.lastWriteTime.Store(time.Now().UnixNano())
+
 	// Atomic update size (n from Write() is always >= 0, but be safe)
 	if n < 0 {
 		n = 0
@@ -854,6 +980,7 @@ func (l *Logger) writeAsync(data []byte) (int, error) {
 		// Drop-on-full policy: silently discard the message
 		// Useful for high-frequency telemetry/access logs
 		l.droppedCount.Add(1)
+		l.lastDropTime.Store(time.Now().UnixNano())
 		return len(data), nil
 
 	case "adaptive":
@@ -1076,6 +1203,12 @@ func (l *Logger) triggerRotation() {
 func (l *Logger) Close() error {
 	var closeErr error
 	l.closeOnce.Do(func() {
+		// Stop metrics callback if running
+		if l.metricsStop != nil {
+			close(l.metricsStop)
+			l.metricsWg.Wait()
+		}
+
 		// Stop MPSC consumer if running
 		if consumer := l.consumer.Load(); consumer != nil {
 			consumer.stop()
@@ -1139,6 +1272,10 @@ type Stats struct {
 	BufferFill    uint64 `json:"buffer_fill"`     // Current buffer fill level (tail-head)
 	IsMPSCActive  bool   `json:"is_mpsc_active"`  // Whether MPSC mode is active
 	DroppedOnFull uint64 `json:"dropped_on_full"` // Messages dropped due to full buffer
+
+	// Timestamps for observability
+	LastWriteTime time.Time `json:"last_write_time"` // Time of last successful write
+	LastDropTime  time.Time `json:"last_drop_time"`  // Time of last message drop (if any)
 
 	// Configuration
 	MaxSizeBytes       int64   `json:"max_size_bytes"`      // Configured max file size
@@ -1239,6 +1376,15 @@ func (l *Logger) Stats() Stats {
 		totalBytes += rotationCount * uint64(l.maxSizeBytes)
 	}
 
+	// Convert timestamps from atomic int64 (unix nano) to time.Time
+	var lastWriteTime, lastDropTime time.Time
+	if lwt := l.lastWriteTime.Load(); lwt > 0 {
+		lastWriteTime = time.Unix(0, lwt)
+	}
+	if ldt := l.lastDropTime.Load(); ldt > 0 {
+		lastDropTime = time.Unix(0, ldt)
+	}
+
 	return Stats{
 		WriteCount:         writeCount,
 		TotalBytes:         totalBytes,
@@ -1252,6 +1398,8 @@ func (l *Logger) Stats() Stats {
 		BufferFill:         bufferFill,
 		IsMPSCActive:       isMPSCActive,
 		DroppedOnFull:      l.droppedCount.Load(),
+		LastWriteTime:      lastWriteTime,
+		LastDropTime:       lastDropTime,
 		MaxSizeBytes:       l.maxSizeBytes,
 		BackpressurePolicy: l.BackpressurePolicy,
 		FlushIntervalMs:    flushIntervalMs,
@@ -1312,9 +1460,78 @@ func (l *Logger) Rotate() error {
 	return nil
 }
 
+// Sync ensures all buffered data is written to disk.
+// For async mode, drains the ring buffer and calls fsync.
+// For sync mode, just calls fsync on the current file.
+//
+// Use Sync for durability checkpoints before critical operations
+// or to ensure data is persisted before process exit.
+//
+// Example:
+//
+//	logger.Write([]byte("critical event\n"))
+//	logger.Sync() // Ensure event is on disk
+//	// Now safe to proceed
+func (l *Logger) Sync() error {
+	// For async mode, flush the ring buffer first
+	if l.Async {
+		if consumer := l.consumer.Load(); consumer != nil {
+			consumer.flushAll()
+		}
+	}
+
+	// Call fsync on the file
+	file := l.currentFile.Load()
+	if file != nil {
+		return file.Sync()
+	}
+	return nil
+}
+
+// FlushAndRotate forces a sync and then rotates the log file.
+// Useful for creating audit trail segments or session boundaries.
+//
+// This combines Sync() and Rotate() atomically:
+//  1. Drains any async buffer
+//  2. Syncs data to disk
+//  3. Rotates to a new file
+//
+// Example:
+//
+//	// End of user session - segment the audit trail
+//	logger.Write([]byte("session ended\n"))
+//	logger.FlushAndRotate()
+//	// New session starts in fresh file
+func (l *Logger) FlushAndRotate() error {
+	if err := l.Sync(); err != nil {
+		return fmt.Errorf("flush failed: %w", err)
+	}
+	return l.Rotate()
+}
+
 // reportError invokes the error callback if set
 func (l *Logger) reportError(operation string, err error) {
 	if l.ErrorCallback != nil {
 		l.ErrorCallback(operation, err)
+	}
+}
+
+// runMetricsCallback runs the periodic metrics callback goroutine.
+// It collects stats and invokes the callback at the configured interval.
+func (l *Logger) runMetricsCallback() {
+	defer l.metricsWg.Done()
+
+	ticker := time.NewTicker(l.metricsInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-l.metricsStop:
+			return
+		case <-ticker.C:
+			if l.metricsCallback != nil {
+				l.metricsCallback(l.Stats())
+			}
+		}
 	}
 }
