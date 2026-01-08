@@ -1,0 +1,17 @@
+# lethe v1.2.0
+
+Released: 2026-01-08
+
+## New APIs
+
+- `WriteContext(ctx, data)` - Context-aware writes with cancellation support
+- `Sync()` - Force flush all buffered data to disk
+- `FlushAndRotate()` - Flush and trigger immediate log rotation
+- `PreWriteHook` - Pre-write hook for data transformation (HMAC, encryption, metrics)
+
+## Integration
+
+These APIs enable Themis audit engine integration with:
+- Context cancellation propagation
+- Cryptographic chain integrity via PreWriteHook
+- Forced rotation for compliance requirements
