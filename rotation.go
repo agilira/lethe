@@ -47,22 +47,24 @@ func (l *Logger) initFile() error {
 	return l.initFileState(file, sanitizedPath)
 }
 
-// initSizeConfig initializes the size configuration with backward compatibility
+// initSizeConfig initializes the size configuration with backward compatibility.
+// Thread-safe: uses atomic.Int64 for maxSizeBytes.
+// Idempotent: returns immediately if already initialized.
 func (l *Logger) initSizeConfig() {
-	if l.maxSizeBytes != 0 {
+	if l.maxSizeBytes.Load() != 0 {
 		return
 	}
 
 	if l.MaxSizeStr != "" {
 		// Use new string-based configuration
 		if size, err := ParseSize(l.MaxSizeStr); err == nil {
-			l.maxSizeBytes = size
+			l.maxSizeBytes.Store(size)
 		} else {
 			l.reportError("size_parse", fmt.Errorf("invalid MaxSizeStr %q: %v", l.MaxSizeStr, err))
 		}
 	} else if l.MaxSize > 0 {
 		// Fallback to legacy MB-based configuration
-		l.maxSizeBytes = l.MaxSize * 1024 * 1024 // MB to bytes
+		l.maxSizeBytes.Store(l.MaxSize * 1024 * 1024) // MB to bytes
 	}
 }
 

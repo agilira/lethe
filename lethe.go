@@ -166,7 +166,7 @@ type Logger struct {
 	closeOnce sync.Once
 
 	// Config cache (parsed once)
-	maxSizeBytes int64 // MaxSize * MB in bytes
+	maxSizeBytes atomic.Int64 // MaxSize * MB in bytes (atomic: read by Stats() concurrent with shouldRotate() writes)
 
 	// Pre-write hook for data transformation (set via LoggerConfig)
 	preWriteHook func(data []byte) ([]byte, error)
@@ -485,6 +485,11 @@ func NewWithConfig(config *LoggerConfig) (*Logger, error) {
 		ErrorCallback:      config.ErrorCallback,
 		BackpressurePolicy: config.BackpressurePolicy,
 		AdaptiveFlush:      config.AdaptiveFlush,
+		FileMode:           config.FileMode,
+		RetryCount:         config.RetryCount,
+		RetryDelay:         config.RetryDelay,
+		BufferSize:         config.BufferSize,
+		FlushInterval:      config.FlushInterval,
 		preWriteHook:       config.PreWriteHook,
 	}
 
@@ -1081,21 +1086,13 @@ func (l *Logger) tryAdaptiveResize(currentBuffer *ringBuffer) bool {
 
 // shouldRotate checks if rotation is needed (lock-free)
 func (l *Logger) shouldRotate(currentSize uint64) bool {
-	// Parse size configuration (supports both old and new formats)
-	if l.maxSizeBytes == 0 {
-		if l.MaxSizeStr != "" {
-			// Use new string-based configuration
-			if size, err := ParseSize(l.MaxSizeStr); err == nil {
-				l.maxSizeBytes = size
-			}
-		} else if l.MaxSize > 0 {
-			// Fallback to legacy MB-based configuration
-			l.maxSizeBytes = l.MaxSize * 1024 * 1024 // MB to bytes
-		}
-	}
+	// WHY: delegate to initSizeConfig() instead of duplicating logic.
+	// initSizeConfig() is idempotent and uses atomic.Int64 for thread safety.
+	l.initSizeConfig()
 
 	// Check size-based rotation
-	if l.maxSizeBytes > 0 && currentSize >= uint64(l.maxSizeBytes) {
+	maxSize := l.maxSizeBytes.Load()
+	if maxSize > 0 && currentSize >= uint64(maxSize) {
 		return true
 	}
 
@@ -1371,9 +1368,10 @@ func (l *Logger) Stats() Stats {
 	// Calculate total bytes as a rough estimate
 	// Note: This is current file size + estimated bytes from rotations
 	totalBytes := l.bytesWritten.Load()
-	if rotationCount := l.rotationSeq.Load(); rotationCount > 0 && l.maxSizeBytes > 0 {
+	maxSize := l.maxSizeBytes.Load()
+	if rotationCount := l.rotationSeq.Load(); rotationCount > 0 && maxSize > 0 {
 		// Rough estimate: rotations * average file size
-		totalBytes += rotationCount * uint64(l.maxSizeBytes)
+		totalBytes += rotationCount * uint64(maxSize)
 	}
 
 	// Convert timestamps from atomic int64 (unix nano) to time.Time
@@ -1400,7 +1398,7 @@ func (l *Logger) Stats() Stats {
 		DroppedOnFull:      l.droppedCount.Load(),
 		LastWriteTime:      lastWriteTime,
 		LastDropTime:       lastDropTime,
-		MaxSizeBytes:       l.maxSizeBytes,
+		MaxSizeBytes:       l.maxSizeBytes.Load(),
 		BackpressurePolicy: l.BackpressurePolicy,
 		FlushIntervalMs:    flushIntervalMs,
 	}

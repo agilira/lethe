@@ -2427,7 +2427,7 @@ func TestHighFrequencyRotation(t *testing.T) {
 	}
 
 	// Use smaller MaxSize in bytes for more frequent rotations
-	logger.maxSizeBytes = 1024 // 1KB
+	logger.maxSizeBytes.Store(1024) // 1KB
 
 	// Rapid successive writes
 	message := "This is a test message that should trigger frequent rotations\n"
@@ -2528,7 +2528,7 @@ func TestConcurrentRotationStress(t *testing.T) {
 	}
 
 	// Force small rotation size
-	logger.maxSizeBytes = 10 * 1024 // 10KB
+	logger.maxSizeBytes.Store(10 * 1024) // 10KB
 
 	var wg sync.WaitGroup
 	numGoroutines := 20

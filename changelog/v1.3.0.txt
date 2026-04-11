@@ -1,0 +1,53 @@
+# lethe v1.3.0
+
+Released: 2026-04-11
+
+## Overview
+
+Security hardening release. Fixes three bugs discovered during adversarial
+security testing (race condition, missing config propagation). Adds 25
+deterministic security tests and 4 fuzz targets covering 9 CWE classes.
+
+## #Corrected
+
+- **DATA RACE in Stats() (CWE-362)**: `maxSizeBytes` was a plain `int64` read
+  by `Stats()` concurrently with writes from `initSizeConfig()` and
+  `shouldRotate()`. Changed to `atomic.Int64` with `.Load()`/`.Store()`
+  accessors. All other Logger fields were already atomic; this was the only
+  non-atomic mutable internal field.
+
+- **NewWithConfig missing field propagation**: `FileMode`, `RetryCount`,
+  `RetryDelay`, `BufferSize`, and `FlushInterval` were not copied from
+  `LoggerConfig` into the `Logger` struct. Users setting these in config
+  would always get defaults (0644, 3, 10ms, 1024, 1ms). All five fields
+  are now properly propagated.
+
+- **Duplicate lazy-init in shouldRotate()**: `shouldRotate()` contained a
+  copy of `initSizeConfig()` logic for parsing `MaxSizeStr`/`MaxSize`.
+  Consolidated to call `initSizeConfig()` directly, eliminating code
+  duplication and ensuring consistent error reporting via `reportError()`.
+
+## #New
+
+- **security_test.go**: 25 deterministic security tests covering:
+  - CWE-22: Path traversal via SanitizeFilename, ValidatePathLength
+  - CWE-20: ParseSize/ParseDuration/NewWithConfig input validation
+  - CWE-362: 5-way concurrent interleaving (Write+Close+Sync+Rotate+Stats)
+  - CWE-400: Oversized single write (10MB), rotation storm
+  - CWE-770: Goroutine leak detection on create/close cycles
+  - CWE-476: Nil config, empty filename, negative MaxBackups
+  - CWE-354: SHA-256 checksum sidecar verification
+  - CWE-732: FileMode propagation verification
+  - CWE-502: LoadFromJSON malformed input rejection
+
+- **security_fuzz_test.go**: 4 fuzz targets with 81 attack-pattern seeds:
+  - `FuzzParseSize`: 27 seeds (overflow, shell injection, null bytes, MaxInt64)
+  - `FuzzParseDuration`: 24 seeds (negative, null bytes, near-overflow)
+  - `FuzzSanitizeFilename`: 23 seeds (traversal, Windows devices, ADS, RTL override)
+  - `FuzzWrite`: 7 seeds (binary, null bytes, control characters)
+
+## #Updated
+
+- `shouldRotate()` now delegates to `initSizeConfig()` instead of duplicating
+  its logic. This ensures the `reportError()` path is taken on parse failure
+  (previously silently swallowed in shouldRotate).
