@@ -1,10 +1,10 @@
-// magic.go: Magic API for Lethe with Iris integration
+// iris_integration.go: Lethe wrapper for Iris logging framework
 //
 // This file provides Iris integration capabilities without importing Iris
 // directly, avoiding circular dependencies while providing seamless integration.
 //
 // Copyright (c) 2025 AGILira
-// Series: Lethe - Magic API
+// Series: Lethe
 // SPDX-License-Identifier: MPL-2.0
 
 package lethe
@@ -78,10 +78,12 @@ func (i *IrisIntegration) WriteOwned(data []byte) (int, error) {
 	return i.logger.WriteOwned(data)
 }
 
-// Sync implements WriteSyncer interface
+// Sync implements WriteSyncer interface.
+// WHY delegate: Logger.Sync() drains the MPSC buffer AND calls fsync.
+// Returning nil here was a data-loss bug -- callers (iris) rely on Sync()
+// to guarantee data is on disk before proceeding.
 func (i *IrisIntegration) Sync() error {
-	// Lethe handles sync internally
-	return nil
+	return i.logger.Sync()
 }
 
 // Close implements WriteSyncer interface

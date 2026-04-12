@@ -312,7 +312,7 @@ func runProductionMagicIntegration() {
 	startTime := time.Now()
 
 	for i := 0; i < productionOps; i++ {
-		service := services[i%len(services)]
+		service := services[i%len(services)] // #nosec G602 -- len(services) is constant 5, modulo guarantees bounds
 
 		irisLogger.With(
 			iris.String("service", service),

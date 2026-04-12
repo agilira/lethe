@@ -1,0 +1,66 @@
+# lethe v1.3.1
+
+Released: 2026-04-12
+
+## Overview
+
+Patch release fixing a data-loss bug in IrisIntegration.Sync(), renaming
+magic.go to the idiomatic iris_integration.go, and adding test coverage
+that was missing for the entire IrisIntegration surface.
+
+---
+
+## #Fixed
+
+### Data-loss bug: IrisIntegration.Sync() returned nil without flushing
+`IrisIntegration.Sync()` unconditionally returned `nil` without calling
+`Logger.Sync()`. Callers (notably the iris framework) rely on `Sync()` to
+guarantee that:
+1. The MPSC ring buffer is fully drained to the file
+2. `fsync` has been called on the underlying file descriptor
+
+With the bug, data written in async mode could remain in the ring buffer
+when `Sync()` returned, causing silent data loss on shutdown or handoff.
+
+Fixed by delegating directly to `l.logger.Sync()`.
+
+---
+
+## #Changed
+
+### Renamed magic.go -> iris_integration.go
+`magic.go` was named when Lethe and Iris were tightly coupled under a
+"Magic API" concept. That coupling no longer exists: Lethe is a standalone
+rotation library, and the file simply provides a convenience wrapper for
+Iris consumers. The name `iris_integration.go` describes the content
+accurately and follows idiomatic Go naming conventions.
+
+No API change. All exported types, functions, and methods are identical.
+
+---
+
+## #New
+
+### iris_integration_test.go: full test coverage for IrisIntegration
+Ten tests covering the entire IrisIntegration surface (was previously zero):
+- `TestIrisIntegration_Write`
+- `TestIrisIntegration_WriteOwned`
+- `TestIrisIntegration_Sync_DelegatesToLogger` (regression test for the bug above)
+- `TestIrisIntegration_Close`
+- `TestIrisIntegration_GetOptimalBufferSize`
+- `TestIrisIntegration_SupportsHotReload`
+- `TestIrisIntegration_GetLogger`
+- `TestIrisIntegration_ConcurrentWriteOwned` (20 goroutines x 50 writes)
+- `TestQuickStart`
+- `TestNewIrisWriter_NilConfig` (default value verification)
+
+All tests PASS with -race detector.
+
+---
+
+## #Fixed (minor)
+
+### False positive gosec G602 in examples/iris-integration/main.go
+`services[i%len(services)]` where `len(services)` is a constant 5 was
+flagged as a potential slice index out of bounds by gosec G602. Added
+`#nosec G602` annotation with justification comment.
