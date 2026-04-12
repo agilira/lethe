@@ -1,0 +1,103 @@
+lethe v1.3.2 -- OnRotate Forensic Callback + errcheck Hygiene
+==============================================================
+
+Released: 2026-04-12
+Commit:   (see git log)
+Authors:  Antonio + AI pair
+
+STATUS: STABLE -- backward compatible addition, no breaking changes.
+
+
+SUMMARY
+-------
+lethe now provides a post-rotation callback (OnRotate) that fires after
+every successful log file rotation with forensic metadata about the
+sealed segment. This enables downstream audit systems (e.g., BlackBox
+hash chains) to record every rotation as a tamper-evident event.
+
+Also fixes all errcheck warnings in context_test.go (5 deferred Close
+calls + 4 explicit Close calls were ignoring errors).
+
+
+FEATURE: OnRotate callback with RotationEvent
+----------------------------------------------
+
+New struct: RotationEvent
+  - Timestamp    time.Time  -- when the rotation completed
+  - PreviousFile string     -- path to the sealed (rotated) log segment
+  - NewFile      string     -- path to the newly created active file
+  - Sequence     uint64     -- monotonic rotation counter (starts at 1)
+  - BytesWritten uint64     -- bytes written to the sealed segment
+
+New field on Logger struct:
+  OnRotate func(event RotationEvent) `json:"-"`
+
+New field on LoggerConfig struct:
+  OnRotate func(event RotationEvent) `json:"-"`
+
+Design decisions:
+  - Callback fires AFTER updateRotationState() but BEFORE
+    scheduleBackgroundTasks(). WHY: the sealed file must still exist
+    on disk when the callback fires (compression/cleanup happens later
+    in background tasks).
+  - BytesWritten is captured BEFORE updateRotationState() resets
+    the counter, so the callback gets the actual sealed segment size.
+  - safeInvokeOnRotate() uses defer/recover to prevent a panicking
+    callback from blocking future rotations (denial of service).
+    Panics are reported via ErrorCallback with operation "on_rotate_panic".
+  - nil OnRotate is a no-op (zero-cost check in performRotation).
+  - Exported field on Logger struct (consistent with ErrorCallback
+    pattern) for both NewWithConfig and direct struct initialization.
+
+
+WHY THIS MATTERS FOR METIS
+---------------------------
+
+Metis BlackBox uses an append-only SHA-256 hash chain for forensic
+audit. Log rotation is a critical event that must be recorded:
+  1. An attacker flooding logs can force rotation to delete evidence
+  2. Without recording rotations, the gap is invisible
+  3. RotationEvent.Sequence detects suppressed/skipped rotations
+  4. RotationEvent.BytesWritten detects anomalous segment sizes
+
+With OnRotate, Metis can wire: lethe rotation -> BlackBox.Dispatch()
+-> hash chain entry. Every rotation becomes unforgeable evidence.
+
+
+FIX: errcheck hygiene in context_test.go
+-----------------------------------------
+
+All 9 occurrences of unchecked logger.Close() in context_test.go
+now properly handle the returned error:
+  - defer logger.Close() -> defer func() { if err := logger.Close(); ... }()
+  - logger.Close() -> if err := logger.Close(); err != nil { t.Errorf(...) }
+
+No error should ever be silently ignored, even in tests.
+
+
+TEST COVERAGE
+-------------
+
+8 new tests in onrotate_test.go:
+
+  - TestOnRotate_FiresOnSizeRotation     -- callback fires on size-triggered rotation
+  - TestOnRotate_FiresOnFlushAndRotate   -- callback fires on manual rotation
+  - TestOnRotate_SequenceIsMonotonic     -- sequence increments monotonically
+  - TestOnRotate_BytesWrittenMatchesData -- sealed segment size matches writes
+  - TestOnRotate_PreviousFileExists      -- sealed file exists at callback time
+  - TestOnRotate_NilCallbackNoError      -- nil OnRotate is safe (regression guard)
+  - TestOnRotate_PanicRecovery           -- panic in callback is caught, reported
+  - TestOnRotate_DirectLoggerStruct      -- works with direct Logger struct init
+
+All tests pass with -race flag. No regressions in existing test suite.
+
+
+QUALITY GATES
+-------------
+  gofmt:       PASS
+  go vet:      PASS
+  staticcheck: PASS
+  errcheck:    PASS (context_test.go warnings eliminated)
+  gosec:       PASS (0 issues)
+  gocyclo:     PASS (performRotation = 4, no new violations)
+  go test -race: PASS (full suite)

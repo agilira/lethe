@@ -102,6 +102,13 @@ type Logger struct {
 	// Parameters are the operation that failed and the specific error.
 	ErrorCallback func(operation string, err error) `json:"-"`
 
+	// OnRotate is called after each successful log file rotation.
+	// WHY: enables forensic audit trails -- downstream systems can record
+	// every rotation in a tamper-evident chain. The callback receives a
+	// RotationEvent with the sealed segment's path, byte count, and
+	// monotonic sequence number. Panics are recovered safely.
+	OnRotate func(event RotationEvent) `json:"-"`
+
 	// FileMode is the file permissions (default: 0644).
 	// Used when creating new log files.
 	FileMode os.FileMode `json:"file_mode"`
@@ -491,6 +498,7 @@ func NewWithConfig(config *LoggerConfig) (*Logger, error) {
 		BufferSize:         config.BufferSize,
 		FlushInterval:      config.FlushInterval,
 		preWriteHook:       config.PreWriteHook,
+		OnRotate:           config.OnRotate,
 	}
 
 	// Apply safe defaults for unset values
@@ -548,6 +556,35 @@ func NewWithConfig(config *LoggerConfig) (*Logger, error) {
 	return logger, nil
 }
 
+// RotationEvent carries forensic information about a completed log rotation.
+// WHY: downstream systems (audit trails, BlackBox hash chains) need to record
+// that a log segment was sealed. Without this callback, rotation is invisible
+// to the application -- a gap that attackers can exploit by flooding logs to
+// force rotation and then deleting evidence of the flood.
+//
+// Each field is chosen for its forensic value:
+//   - Timestamp: when the rotation occurred (for ordering in audit chain)
+//   - PreviousFile: the sealed segment filename (for integrity verification)
+//   - NewFile: the active file after rotation (for tracking current state)
+//   - Sequence: monotonic counter (gaps indicate missed or suppressed rotations)
+//   - BytesWritten: size of sealed segment (anomalies indicate flood attacks)
+type RotationEvent struct {
+	// Timestamp is when the rotation completed
+	Timestamp time.Time
+
+	// PreviousFile is the path to the sealed (rotated) log segment
+	PreviousFile string
+
+	// NewFile is the path to the newly created active log file
+	NewFile string
+
+	// Sequence is the monotonic rotation counter (starts at 1)
+	Sequence uint64
+
+	// BytesWritten is the total bytes written to the sealed segment
+	BytesWritten uint64
+}
+
 // LoggerConfig holds configuration options for creating a Logger.
 // This struct provides a clear, documented way to configure all Logger options.
 type LoggerConfig struct {
@@ -599,6 +636,15 @@ type LoggerConfig struct {
 	// MetricsInterval is the interval between MetricsCallback invocations.
 	// Default: 10s. Set to 0 to disable periodic callbacks.
 	MetricsInterval time.Duration `json:"metrics_interval"`
+
+	// OnRotate is called after each successful log rotation.
+	// WHY: enables forensic audit trails -- downstream systems can record
+	// every rotation in a tamper-evident chain (e.g., BlackBox hash chain).
+	// The callback receives a RotationEvent with the sealed segment's
+	// filename, byte count, and monotonic sequence number.
+	// CRITICAL: callback must be fast (<1ms) to avoid blocking writers.
+	// Panics in the callback are recovered and reported via ErrorCallback.
+	OnRotate func(event RotationEvent) `json:"-"`
 }
 
 // Write implements io.Writer interface for universal compatibility.

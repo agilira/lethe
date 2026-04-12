@@ -37,7 +37,11 @@ func TestWriteContext_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 	data := []byte("test log entry\n")
@@ -51,7 +55,9 @@ func TestWriteContext_Success(t *testing.T) {
 	}
 
 	// Verify data was written
-	logger.Close()
+	if err := logger.Close(); err != nil {
+		t.Errorf("Close failed: %v", err)
+	}
 	content, _ := os.ReadFile(logFile)
 	if string(content) != string(data) {
 		t.Errorf("File content mismatch: got %q, want %q", content, data)
@@ -67,7 +73,11 @@ func TestWriteContext_CancelledContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	// Create already-cancelled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -87,7 +97,9 @@ func TestWriteContext_CancelledContext(t *testing.T) {
 	}
 
 	// Verify nothing was written
-	logger.Close()
+	if err := logger.Close(); err != nil {
+		t.Errorf("Close failed: %v", err)
+	}
 	content, _ := os.ReadFile(logFile)
 	if len(content) > 0 {
 		t.Errorf("Data written despite cancelled context: %q", content)
@@ -103,7 +115,11 @@ func TestWriteContext_Timeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	// Create context that's already timed out
 	ctx, cancel := context.WithTimeout(context.Background(), 0)
@@ -135,7 +151,11 @@ func TestWriteOwnedContext_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 	data := []byte("zero-copy test entry\n")
@@ -158,7 +178,11 @@ func TestWriteOwnedContext_CancelledContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	// Create already-cancelled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -187,7 +211,11 @@ func TestWriteContext_MultipleWrites(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() {
+		if err := logger.Close(); err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -208,7 +236,9 @@ func TestWriteContext_MultipleWrites(t *testing.T) {
 	}
 
 	// Verify all data written
-	logger.Close()
+	if err := logger.Close(); err != nil {
+		t.Errorf("Close failed: %v", err)
+	}
 	content, _ := os.ReadFile(logFile)
 	expected := "entry 1\nentry 2\nentry 3\n"
 	if string(content) != expected {

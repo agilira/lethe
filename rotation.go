@@ -192,14 +192,48 @@ func (l *Logger) performRotation() error {
 	backupName := l.generateBackupName()
 	retryCount, retryDelay, fileMode := l.getRetryConfig()
 
+	// WHY capture before closeAndRotateFile: bytesWritten is reset in
+	// updateRotationState(), so we must snapshot it here for the
+	// RotationEvent. This gives downstream consumers the exact size
+	// of the sealed segment for anomaly detection (flood attacks).
+	sealedBytes := l.bytesWritten.Load()
+
 	if err := l.closeAndRotateFile(currentFile, backupName, retryCount, retryDelay, fileMode); err != nil {
 		return err
 	}
 
 	l.updateRotationState()
+
+	// Invoke OnRotate callback before scheduling background tasks.
+	// WHY before: the callback must fire while the rotation is still
+	// synchronous so that blackbox can record the event before
+	// compression/cleanup may alter the sealed file.
+	if l.OnRotate != nil {
+		l.safeInvokeOnRotate(RotationEvent{
+			Timestamp:    timecache.CachedTime(),
+			PreviousFile: backupName,
+			NewFile:      l.Filename,
+			Sequence:     l.rotationSeq.Load(),
+			BytesWritten: sealedBytes,
+		})
+	}
+
 	l.scheduleBackgroundTasks(backupName)
 
 	return nil
+}
+
+// safeInvokeOnRotate calls the OnRotate callback with panic recovery.
+// WHY: the callback is user-provided code running in the rotation path.
+// A panic here would leave the rotation flag set and block all future
+// rotations (denial of service). We recover and report via ErrorCallback.
+func (l *Logger) safeInvokeOnRotate(event RotationEvent) {
+	defer func() {
+		if r := recover(); r != nil {
+			l.reportError("on_rotate_panic", fmt.Errorf("OnRotate callback panicked: %v", r))
+		}
+	}()
+	l.OnRotate(event)
 }
 
 // generateBackupName creates a timestamped backup filename
