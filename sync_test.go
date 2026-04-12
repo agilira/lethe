@@ -143,7 +143,9 @@ func TestFlushAndRotate_CreatesNewFile(t *testing.T) {
 	logger.WaitForBackgroundTasks()
 
 	// Write more data (goes to new file)
-	logger.Write([]byte("session 2 data\n"))
+	if _, err := logger.Write([]byte("session 2 data\n")); err != nil {
+		t.Errorf("Write session 2 data failed: %v", err)
+	}
 	if err := logger.Sync(); err != nil {
 		t.Errorf("Sync failed: %v", err)
 	}
