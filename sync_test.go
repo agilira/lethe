@@ -138,7 +138,9 @@ func TestFlushAndRotate_CreatesNewFile(t *testing.T) {
 
 	// Write more data (goes to new file)
 	logger.Write([]byte("session 2 data\n"))
-	logger.Sync()
+	if err := logger.Sync(); err != nil {
+		t.Errorf("Sync failed: %v", err)
+	}
 
 	// Current log should only have session 2 data
 	content, _ := os.ReadFile(logFile)
@@ -182,7 +184,9 @@ func TestFlushAndRotate_AuditSegmentation(t *testing.T) {
 		logger.Write([]byte("END " + session + "\n"))
 
 		// Segment by session
-		logger.FlushAndRotate()
+		if err := logger.FlushAndRotate(); err != nil {
+			t.Errorf("FlushAndRotate failed for session %s: %v", session, err)
+		}
 		logger.WaitForBackgroundTasks()
 	}
 

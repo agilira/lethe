@@ -48,7 +48,10 @@ func TestStats_DroppedCount(t *testing.T) {
 	// Flood the buffer to trigger drops
 	data := make([]byte, 100)
 	for i := 0; i < 1000; i++ {
-		logger.Write(data)
+		// WHY: Write may fail when buffer is full; drops are expected under flood.
+		if _, err := logger.Write(data); err != nil {
+			t.Logf("Write dropped under pressure (expected): %v", err)
+		}
 	}
 
 	stats := logger.Stats()
@@ -82,7 +85,9 @@ func TestStats_QueueDepth(t *testing.T) {
 
 	// Write some data
 	for i := 0; i < 10; i++ {
-		logger.Write([]byte("test entry\n"))
+		if _, err := logger.Write([]byte("test entry\n")); err != nil {
+			t.Errorf("Write failed on iteration %d: %v", i, err)
+		}
 	}
 
 	stats := logger.Stats()

@@ -123,9 +123,9 @@ func (l *Logger) cleanupOrphanTmpFiles(dir string) {
 				continue
 			}
 			if time.Since(info.ModTime()) > time.Minute {
-				if err := os.Remove(tmpPath); err == nil {
-					// Successfully cleaned up orphan file
-				}
+				// WHY: Best-effort cleanup of orphan temp file; error is
+				// intentionally not acted upon to avoid masking the original error.
+				_ = os.Remove(tmpPath)
 			}
 		}
 	}

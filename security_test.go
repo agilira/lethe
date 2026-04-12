@@ -818,11 +818,10 @@ func TestSecurity_LoadFromJSON_MalformedInput(t *testing.T) {
 		_, err := LoadFromJSON([]byte(tc.input))
 		// WHY: error or empty filename -> caught later. Must NOT panic.
 		if err == nil {
-			// If no parse error, filename validation should catch it
+			// If no parse error, filename validation should catch it.
+			// WHY: Empty filename is valid at parse time; NewWithConfig rejects it.
 			cfg, _ := LoadFromJSON([]byte(tc.input))
-			if cfg != nil && cfg.Filename == "" {
-				// This is fine -- empty filename caught by NewWithConfig
-			}
+			_ = cfg // parse succeeded; downstream validation is the guard
 		}
 	}
 }

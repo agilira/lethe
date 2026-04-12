@@ -229,7 +229,9 @@ func TestPreWriteHook_WithAsync(t *testing.T) {
 
 	// Write multiple entries
 	for i := 0; i < 10; i++ {
-		logger.Write([]byte("entry\n"))
+		if _, err := logger.Write([]byte("entry\n")); err != nil {
+			t.Errorf("Write failed on iteration %d: %v", i, err)
+		}
 	}
 
 	// Wait for async processing
