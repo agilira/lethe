@@ -157,7 +157,7 @@ type Logger struct {
 
 	// High-performance time cache for reduced allocation overhead
 	timeCache     *timecache.TimeCache
-	timeCacheOnce sync.Once
+	timeCacheOnce sync.Once // guards lazy init of timeCache; all writers go through this
 
 	// File initialization protection
 	initMutex sync.Mutex
@@ -648,6 +648,15 @@ type LoggerConfig struct {
 //	// With frameworks
 //	logrus.SetOutput(logger)
 func (l *Logger) Write(data []byte) (int, error) {
+	// WHY: timeCache must be initialized before any goroutine proceeds to
+	// initFileState() or generateBackupName() which both read l.timeCache.
+	// Write() is the single entry point for all goroutines, so placing the
+	// Once here guarantees that by the time any concurrent work starts,
+	// timeCache is fully initialized with sync.Once memory ordering.
+	l.timeCacheOnce.Do(func() {
+		l.timeCache = timecache.NewWithResolution(time.Millisecond)
+	})
+
 	// Increment write counter for auto-scaling metrics
 	l.writeCount.Add(1)
 
@@ -693,6 +702,13 @@ func (l *Logger) Write(data []byte) (int, error) {
 //
 // Returns the number of bytes written and any error encountered.
 func (l *Logger) WriteOwned(data []byte) (int, error) {
+	// WHY: WriteOwned is a separate public entry point (zero-copy path).
+	// It must run timeCacheOnce.Do() for the same reason as Write(): direct
+	// &Logger{} construction leaves timeCache nil, and writeSync reads it.
+	l.timeCacheOnce.Do(func() {
+		l.timeCache = timecache.NewWithResolution(time.Millisecond)
+	})
+
 	// Increment write counter for auto-scaling metrics
 	l.writeCount.Add(1)
 
@@ -887,11 +903,8 @@ func (l *Logger) shouldScaleToMPSC() bool {
 
 // writeSync handles synchronous writes (default mode)
 func (l *Logger) writeSync(data []byte) (int, error) {
-	// Ensure timeCache is initialized before use
-	l.timeCacheOnce.Do(func() {
-		l.timeCache = timecache.NewWithResolution(time.Millisecond)
-	})
-
+	// WHY: timeCache is guaranteed to be initialized before writeSync is
+	// called — Write() runs timeCacheOnce.Do before dispatching here.
 	start := l.timeCache.CachedTime()
 	defer func() {
 		// Measure and record latency using cached time

@@ -45,7 +45,9 @@ func TestSync_BasicFunctionality(t *testing.T) {
 
 	// Write some data
 	testData := []byte("important audit entry\n")
-	logger.Write(testData)
+	if _, err := logger.Write(testData); err != nil {
+		t.Errorf("Write failed: %v", err)
+	}
 
 	// Sync to ensure data is on disk
 	if err := logger.Sync(); err != nil {
@@ -79,7 +81,9 @@ func TestSync_SyncMode(t *testing.T) {
 	defer logger.Close()
 
 	// Write data
-	logger.Write([]byte("sync mode data\n"))
+	if _, err := logger.Write([]byte("sync mode data\n")); err != nil {
+		t.Errorf("Write failed: %v", err)
+	}
 
 	// Sync should work in sync mode
 	if err := logger.Sync(); err != nil {
@@ -126,7 +130,9 @@ func TestFlushAndRotate_CreatesNewFile(t *testing.T) {
 	defer logger.Close()
 
 	// Write initial data
-	logger.Write([]byte("session 1 data\n"))
+	if _, err := logger.Write([]byte("session 1 data\n")); err != nil {
+		t.Errorf("Write failed: %v", err)
+	}
 
 	// Force rotation
 	if err := logger.FlushAndRotate(); err != nil {
@@ -178,10 +184,11 @@ func TestFlushAndRotate_AuditSegmentation(t *testing.T) {
 	}
 
 	for _, session := range sessions {
-		logger.Write([]byte("BEGIN " + session + "\n"))
-		logger.Write([]byte("action-1\n"))
-		logger.Write([]byte("action-2\n"))
-		logger.Write([]byte("END " + session + "\n"))
+		for _, line := range []string{"BEGIN " + session + "\n", "action-1\n", "action-2\n", "END " + session + "\n"} {
+			if _, err := logger.Write([]byte(line)); err != nil {
+				t.Errorf("Write failed for session %s: %v", session, err)
+			}
+		}
 
 		// Segment by session
 		if err := logger.FlushAndRotate(); err != nil {

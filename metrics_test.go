@@ -120,7 +120,9 @@ func TestStats_Timestamps(t *testing.T) {
 	before := time.Now()
 
 	// Write some data
-	logger.Write([]byte("test entry\n"))
+	if _, err := logger.Write([]byte("test entry\n")); err != nil {
+		t.Errorf("Write failed: %v", err)
+	}
 
 	after := time.Now()
 
@@ -160,7 +162,9 @@ func TestMetricsCallback(t *testing.T) {
 
 	// Write some data
 	for i := 0; i < 100; i++ {
-		logger.Write([]byte("test entry\n"))
+		if _, err := logger.Write([]byte("test entry\n")); err != nil {
+			t.Logf("Write dropped (expected under load): %v", err)
+		}
 	}
 
 	// Wait for at least one callback
@@ -197,7 +201,9 @@ func TestStats_ContentionRatio(t *testing.T) {
 
 	// Write some data
 	for i := 0; i < 100; i++ {
-		logger.Write([]byte("test entry\n"))
+		if _, err := logger.Write([]byte("test entry\n")); err != nil {
+			t.Logf("Write dropped (expected under contention): %v", err)
+		}
 	}
 
 	stats := logger.Stats()
@@ -228,7 +234,9 @@ func TestStats_LatencyTracking(t *testing.T) {
 
 	// Write some data
 	for i := 0; i < 100; i++ {
-		logger.Write([]byte("test entry for latency measurement\n"))
+		if _, err := logger.Write([]byte("test entry for latency measurement\n")); err != nil {
+			t.Errorf("Write failed on iteration %d: %v", i, err)
+		}
 	}
 
 	stats := logger.Stats()

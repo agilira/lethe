@@ -19,6 +19,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	timecache "github.com/agilira/go-timecache"
 )
 
 // initFile creates and opens the initial log file
@@ -202,12 +204,14 @@ func (l *Logger) performRotation() error {
 
 // generateBackupName creates a timestamped backup filename
 func (l *Logger) generateBackupName() string {
-	var now time.Time
-	if l.timeCache != nil {
-		now = l.timeCache.CachedTime()
-	} else {
-		now = time.Now()
-	}
+	// WHY: Both writeSync and generateBackupName go through timeCacheOnce.Do
+	// so that all reads of l.timeCache are synchronized through the same
+	// sync.Once memory ordering guarantee. Direct reads without the Once
+	// would race with the initialization write in writeSync (DATA RACE).
+	l.timeCacheOnce.Do(func() {
+		l.timeCache = timecache.NewWithResolution(time.Millisecond)
+	})
+	now := l.timeCache.CachedTime()
 	if !l.LocalTime {
 		now = now.UTC()
 	}
