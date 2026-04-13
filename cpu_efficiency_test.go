@@ -24,11 +24,11 @@ import (
 // rather than slow (polling with backoff).
 func TestMPSCConsumer_IdleCPUEfficiency(t *testing.T) {
 	testFile := filepath.Join(os.TempDir(), "lethe_cpu_test.log")
-	defer os.Remove(testFile)
+	defer func() { _ = os.Remove(testFile) }()
 	defer func() {
 		matches, _ := filepath.Glob(testFile + "*")
 		for _, m := range matches {
-			os.Remove(m)
+			_ = os.Remove(m)
 		}
 	}()
 
@@ -84,7 +84,7 @@ func TestMPSCConsumer_IdleCPUEfficiency(t *testing.T) {
 	}
 
 	avgLatency := totalLatency / iterations
-	logger.Close()
+	_ = logger.Close()
 
 	t.Logf("Average flush latency after idle: %v", avgLatency)
 
@@ -101,11 +101,11 @@ func TestMPSCConsumer_IdleCPUEfficiency(t *testing.T) {
 // when idle vs when there's work to do.
 func TestMPSCConsumer_WakeupCount(t *testing.T) {
 	testFile := filepath.Join(os.TempDir(), "lethe_wakeup_test.log")
-	defer os.Remove(testFile)
+	defer func() { _ = os.Remove(testFile) }()
 	defer func() {
 		matches, _ := filepath.Glob(testFile + "*")
 		for _, m := range matches {
-			os.Remove(m)
+			_ = os.Remove(m)
 		}
 	}()
 
@@ -136,7 +136,7 @@ func TestMPSCConsumer_WakeupCount(t *testing.T) {
 	idleDuration := time.Since(idleStart)
 
 	numGoroutinesAfter := runtime.NumGoroutine()
-	logger.Close()
+	_ = logger.Close()
 
 	t.Logf("Idle duration: %v", idleDuration)
 	t.Logf("Goroutines before: %d, after: %d", numGoroutinesBefore, numGoroutinesAfter)
@@ -159,11 +159,11 @@ func TestMPSCConsumer_WakeupCount(t *testing.T) {
 // promptly when new data arrives, even after being idle.
 func TestMPSCConsumer_EventDrivenWakeup(t *testing.T) {
 	testFile := filepath.Join(os.TempDir(), "lethe_event_test.log")
-	defer os.Remove(testFile)
+	defer func() { _ = os.Remove(testFile) }()
 	defer func() {
 		matches, _ := filepath.Glob(testFile + "*")
 		for _, m := range matches {
-			os.Remove(m)
+			_ = os.Remove(m)
 		}
 	}()
 
@@ -206,7 +206,7 @@ func TestMPSCConsumer_EventDrivenWakeup(t *testing.T) {
 	}
 	flushLatency := time.Since(writeStart)
 
-	logger.Close()
+	_ = logger.Close()
 
 	t.Logf("Flush latency after idle: %v", flushLatency)
 

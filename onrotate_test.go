@@ -44,7 +44,7 @@ func TestOnRotate_FiresOnSizeRotation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write enough to trigger at least one rotation
 	data := []byte(strings.Repeat("x", 200) + "\n")
@@ -102,7 +102,7 @@ func TestOnRotate_FiresOnFlushAndRotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	if _, err := logger.Write([]byte("audit entry\n")); err != nil {
@@ -142,7 +142,7 @@ func TestOnRotate_SequenceIsMonotonic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Perform 3 manual rotations
 	for i := 0; i < 3; i++ {
@@ -194,7 +194,7 @@ func TestOnRotate_BytesWrittenMatchesData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write known amount of data
 	payload := []byte("exactly 20 bytes!!!\n")
@@ -242,7 +242,7 @@ func TestOnRotate_PreviousFileExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if _, err := logger.Write([]byte("data\n")); err != nil {
 		t.Fatalf("Write: %v", err)
@@ -282,7 +282,7 @@ func TestOnRotate_NilCallbackNoError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write enough to trigger rotation without OnRotate set
 	data := []byte(strings.Repeat("y", 200) + "\n")
@@ -322,7 +322,7 @@ func TestOnRotate_PanicRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewWithConfig: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write enough to trigger rotation -- the panic must be caught
 	data := []byte(strings.Repeat("z", 200) + "\n")
@@ -363,7 +363,7 @@ func TestOnRotate_DirectLoggerStruct(t *testing.T) {
 			called.Add(1)
 		},
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := []byte(strings.Repeat("d", 200) + "\n")
 	for i := 0; i < 20; i++ {

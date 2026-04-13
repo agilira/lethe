@@ -27,21 +27,21 @@ func cleanupTestFiles() {
 			continue // Ignore glob errors in cleanup
 		}
 		for _, match := range matches {
-			os.Remove(match)
+			_ = os.Remove(match)
 		}
 	}
 }
 
 // cleanupTestFile removes a specific test file and its backups
 func cleanupTestFile(testFile string) {
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 	pattern := testFile + "*"
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return
 	}
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 }
 
@@ -55,7 +55,7 @@ func TestConstructors(t *testing.T) {
 		if err != nil {
 			t.Fatalf("New() failed: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if logger.Filename != testFile {
 			t.Errorf("Expected filename %s, got %s", testFile, logger.Filename)
@@ -79,7 +79,7 @@ func TestConstructors(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error for empty filename")
 			if logger != nil {
-				logger.Close()
+				_ = logger.Close()
 			}
 		}
 		if logger != nil {
@@ -101,7 +101,7 @@ func TestConstructors(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewWithConfig() failed: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if logger.Filename != config.Filename {
 			t.Errorf("Expected filename %s, got %s", config.Filename, logger.Filename)
@@ -125,7 +125,7 @@ func TestConstructors(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error for nil config")
 			if logger != nil {
-				logger.Close()
+				_ = logger.Close()
 			}
 		}
 		if logger != nil {
@@ -143,7 +143,7 @@ func TestConstructors(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error for empty filename in config")
 			if logger != nil {
-				logger.Close()
+				_ = logger.Close()
 			}
 		}
 		if logger != nil {
@@ -161,7 +161,7 @@ func TestRotateFunction(t *testing.T) {
 		MaxSize:    1, // Small size to test rotation
 		MaxBackups: 3,
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data first
 	_, err := logger.Write([]byte("initial data\n"))
@@ -207,7 +207,7 @@ func TestDefaultFileSystem(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		file.Close()
+		_ = file.Close()
 
 		// Test Stat
 		info, err := fs.Stat(testFile)
@@ -229,14 +229,14 @@ func TestDefaultFileSystem(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Write failed: %v", err)
 		}
-		file.Close()
+		_ = file.Close()
 
 		// Test Open
 		file, err = fs.Open(testFile + "_open")
 		if err != nil {
 			t.Fatalf("Open failed: %v", err)
 		}
-		file.Close()
+		_ = file.Close()
 
 		// Test Remove
 		err = fs.Remove(testFile + "_open")
@@ -257,7 +257,7 @@ func TestDefaultFileSystem(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		file.Close()
+		_ = file.Close()
 
 		// Test Rename
 		newName := testFile + "_rename_dst"
@@ -312,7 +312,7 @@ func TestWriteOwnedDetailed(t *testing.T) {
 			MaxSize:  1,
 			Async:    false, // Force sync mode
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("test sync owned write\n")
 		n, err := logger.WriteOwned(data)
@@ -335,7 +335,7 @@ func TestWriteOwnedDetailed(t *testing.T) {
 			MaxSize:  1,
 			Async:    true, // Force async mode
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("test async owned write\n")
 		n, err := logger.WriteOwned(data)
@@ -356,7 +356,7 @@ func TestWriteOwnedDetailed(t *testing.T) {
 			MaxSize:  1,
 			Async:    false,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// First write to establish baseline
 		if _, err := logger.Write([]byte("baseline\n")); err != nil {
@@ -390,7 +390,7 @@ func TestWriteOwnedDetailed(t *testing.T) {
 			Async:      true,
 			BufferSize: 4, // Very small buffer to trigger full condition
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Fill the buffer
 		for i := 0; i < 10; i++ {
@@ -420,7 +420,7 @@ func TestWriteOwnedDetailed(t *testing.T) {
 			MaxSize:  1,
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("should fallback to sync\n")
 		n, err := logger.WriteOwned(data)
@@ -443,7 +443,7 @@ func TestGenerateChecksum(t *testing.T) {
 			MaxSize:  1,
 			Checksum: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create a file to generate checksum for
 		file, err := os.Create(testFile + "_checksum_test")
@@ -454,15 +454,15 @@ func TestGenerateChecksum(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to write test data: %v", err)
 		}
-		file.Close()
-		defer os.Remove(testFile + "_checksum_test")
+		_ = file.Close()
+		defer func() { _ = os.Remove(testFile + "_checksum_test") }()
 
 		// Generate checksum
 		logger.generateChecksum(testFile + "_checksum_test")
 
 		// Check that checksum file was created
 		checksumFile := testFile + "_checksum_test.sha256"
-		defer os.Remove(checksumFile)
+		defer func() { _ = os.Remove(checksumFile) }()
 
 		if _, err := os.Stat(checksumFile); err != nil {
 			t.Errorf("Checksum file not created: %v", err)
@@ -484,7 +484,7 @@ func TestGenerateChecksum(t *testing.T) {
 			MaxSize:  1,
 			Checksum: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create a .gz file to simulate compressed file
 		gzFile := testFile + "_compressed_test.gz"
@@ -496,15 +496,15 @@ func TestGenerateChecksum(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to write gz test data: %v", err)
 		}
-		file.Close()
-		defer os.Remove(gzFile)
+		_ = file.Close()
+		defer func() { _ = os.Remove(gzFile) }()
 
 		// Generate checksum for non-existent file (should find .gz version)
 		logger.generateChecksum(testFile + "_compressed_test")
 
 		// Check that checksum file was created for .gz file
 		checksumFile := gzFile + ".sha256"
-		defer os.Remove(checksumFile)
+		defer func() { _ = os.Remove(checksumFile) }()
 
 		if _, err := os.Stat(checksumFile); err != nil {
 			t.Errorf("Checksum file for .gz not created: %v", err)
@@ -522,7 +522,7 @@ func TestGenerateChecksum(t *testing.T) {
 				}
 			},
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Try to generate checksum for non-existent file
 		logger.generateChecksum("non_existent_file_12345")
@@ -530,7 +530,7 @@ func TestGenerateChecksum(t *testing.T) {
 		// Should not create checksum file
 		checksumFile := "non_existent_file_12345.sha256"
 		if _, err := os.Stat(checksumFile); err == nil {
-			os.Remove(checksumFile)
+			_ = os.Remove(checksumFile)
 			t.Error("Checksum file should not be created for non-existent file")
 		}
 	})
@@ -546,7 +546,7 @@ func TestGenerateChecksum(t *testing.T) {
 				}
 			},
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Try to generate checksum for non-existent .gz file
 		logger.generateChecksum("non_existent_file_12345.gz")
@@ -554,7 +554,7 @@ func TestGenerateChecksum(t *testing.T) {
 		// Should not create checksum file
 		checksumFile := "non_existent_file_12345.gz.sha256"
 		if _, err := os.Stat(checksumFile); err == nil {
-			os.Remove(checksumFile)
+			_ = os.Remove(checksumFile)
 			t.Error("Checksum file should not be created for non-existent .gz file")
 		}
 	})
@@ -570,7 +570,7 @@ func TestGenerateChecksum(t *testing.T) {
 				}
 			},
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// This would be difficult to simulate reliably across platforms
 		// But the error path is covered by attempting operations on restricted files
@@ -596,7 +596,7 @@ func TestWriteAsyncOwnedDetailed(t *testing.T) {
 			BufferSize:         2, // Very small buffer (minimum)
 			BackpressurePolicy: "drop",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Aggressively fill buffer with large messages
 		for i := 0; i < 20; i++ {
@@ -661,7 +661,7 @@ func TestWriteAsyncOwnedDetailed(t *testing.T) {
 			BufferSize:         4, // Small buffer for testing
 			BackpressurePolicy: "adaptive",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Fill buffer
 		for i := 0; i < 8; i++ {
@@ -693,7 +693,7 @@ func TestWriteAsyncOwnedDetailed(t *testing.T) {
 			BufferSize:         4,          // Small buffer
 			BackpressurePolicy: "fallback", // Explicit fallback
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Fill buffer
 		for i := 0; i < 10; i++ {
@@ -725,7 +725,7 @@ func TestWriteAsyncOwnedDetailed(t *testing.T) {
 			BufferSize: 4, // Small buffer
 			// No BackpressurePolicy specified - should default to "fallback"
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Fill buffer
 		for i := 0; i < 10; i++ {
@@ -755,7 +755,7 @@ func TestWriteAsyncOwnedDetailed(t *testing.T) {
 			MaxSize:  1,
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// This should trigger initMPSC failure and fallback
 		data := []byte("test initMPSC failure")
@@ -775,7 +775,7 @@ func TestWriteAsyncOwnedDetailed(t *testing.T) {
 			MaxSize:  1,
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Force buffer to be nil by manipulating internal state
 		// This is a bit hacky but necessary to test the nil check
@@ -937,7 +937,7 @@ func TestPublicAPI_LumberjackCompatibility(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
+	_ = logger.Close()
 	cleanupTestFiles()
 }
 
@@ -961,7 +961,7 @@ func TestPublicAPI_LetheExtensions(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
+	_ = logger.Close()
 	cleanupTestFiles()
 }
 
@@ -992,7 +992,7 @@ func TestPublicAPI_ZeroLocks(t *testing.T) {
 	}
 
 	// Non deve essere crashato
-	logger.Close()
+	_ = logger.Close()
 }
 
 func TestConfig_ParseSizes(t *testing.T) {
@@ -1105,7 +1105,7 @@ func TestRotation_SizeBasedTrigger(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
+	_ = logger.Close()
 }
 
 func TestRotation_TimeBasedTrigger(t *testing.T) {
@@ -1160,7 +1160,7 @@ func TestRotation_TimeBasedTrigger(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
+	_ = logger.Close()
 }
 
 func TestRotation_TimeBasedConfiguration(t *testing.T) {
@@ -1190,8 +1190,8 @@ func TestRotation_TimeBasedConfiguration(t *testing.T) {
 				t.Errorf("Write failed with MaxAge %v: %v", test.maxAge, err)
 			}
 
-			logger.Close()
-			os.Remove("test_config.log")
+			_ = logger.Close()
+			_ = os.Remove("test_config.log")
 		})
 	}
 }
@@ -1217,10 +1217,10 @@ func TestRotation_MaxAgeStr(t *testing.T) {
 			testFile := fmt.Sprintf("test_maxage_str_%s.log", strings.ReplaceAll(test.name, " ", "_"))
 
 			// Cleanup
-			os.Remove(testFile)
+			_ = os.Remove(testFile)
 			matches, _ := filepath.Glob(testFile + ".*")
 			for _, match := range matches {
-				os.Remove(match)
+				_ = os.Remove(match)
 			}
 
 			config := &LoggerConfig{
@@ -1243,7 +1243,7 @@ func TestRotation_MaxAgeStr(t *testing.T) {
 			} else {
 				if err == nil {
 					t.Errorf("Expected error for invalid MaxAgeStr %q, got none", test.maxAgeStr)
-					logger.Close()
+					_ = logger.Close()
 				}
 				return
 			}
@@ -1254,8 +1254,8 @@ func TestRotation_MaxAgeStr(t *testing.T) {
 				t.Errorf("Write failed: %v", err)
 			}
 
-			logger.Close()
-			os.Remove(testFile)
+			_ = logger.Close()
+			_ = os.Remove(testFile)
 		})
 	}
 }
@@ -1265,10 +1265,10 @@ func TestRotation_MaxAgeStrTimeBasedRotation(t *testing.T) {
 	testFile := "test_maxage_str_rotation.log"
 
 	// Cleanup first
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 	matches, _ := filepath.Glob(testFile + ".*")
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 
 	config := &LoggerConfig{
@@ -1311,17 +1311,17 @@ func TestRotation_MaxAgeStrTimeBasedRotation(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
-	os.Remove(testFile)
+	_ = logger.Close()
+	_ = os.Remove(testFile)
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 }
 
 func TestRotation_MaxAgeConflictValidation(t *testing.T) {
 	// Test that specifying both MaxAge and MaxAgeStr causes an error
 	testFile := "test_maxage_conflict.log"
-	defer os.Remove(testFile)
+	defer func() { _ = os.Remove(testFile) }()
 
 	config := &LoggerConfig{
 		Filename:   testFile,
@@ -1332,7 +1332,7 @@ func TestRotation_MaxAgeConflictValidation(t *testing.T) {
 
 	logger, err := NewWithConfig(config)
 	if err == nil {
-		logger.Close()
+		_ = logger.Close()
 		t.Fatalf("Expected error when specifying both MaxAge and MaxAgeStr, but got none")
 	}
 
@@ -1357,7 +1357,7 @@ func TestNewFunctions(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testFile := fmt.Sprintf("test_%s.log", strings.ToLower(test.name))
-			defer os.Remove(testFile)
+			defer func() { _ = os.Remove(testFile) }()
 
 			logger, err := test.function(testFile)
 			if err != nil {
@@ -1376,14 +1376,14 @@ func TestNewFunctions(t *testing.T) {
 				t.Errorf("%s didn't create log file: %v", test.name, err)
 			}
 
-			logger.Close()
+			_ = logger.Close()
 		})
 	}
 }
 
 func TestNewSimple(t *testing.T) {
 	testFile := "test_newsimple.log"
-	defer os.Remove(testFile)
+	defer func() { _ = os.Remove(testFile) }()
 
 	logger, err := NewSimple(testFile, "50MB", 3)
 	if err != nil {
@@ -1411,7 +1411,7 @@ func TestNewSimple(t *testing.T) {
 		t.Errorf("NewSimple write failed: %v", err)
 	}
 
-	logger.Close()
+	_ = logger.Close()
 }
 
 func TestNewFunctionsEmptyFilename(t *testing.T) {
@@ -1431,7 +1431,7 @@ func TestNewFunctionsEmptyFilename(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			logger, err := test.fn()
 			if err == nil {
-				logger.Close()
+				_ = logger.Close()
 				t.Errorf("%s should return error for empty filename", test.name)
 			}
 			if !strings.Contains(err.Error(), "filename cannot be empty") {
@@ -1446,10 +1446,10 @@ func TestRotation_SizeAndTimeInteraction(t *testing.T) {
 	testFile := "test_combined_rotation.log"
 
 	// Cleanup first
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 	matches, _ := filepath.Glob(testFile + ".*")
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 
 	logger := &Logger{
@@ -1498,10 +1498,10 @@ func TestRotation_SizeAndTimeInteraction(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
-	os.Remove(testFile)
+	_ = logger.Close()
+	_ = os.Remove(testFile)
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 }
 
@@ -1510,10 +1510,10 @@ func TestCompression_GzipRotatedFiles(t *testing.T) {
 	testFile := "test_compression.log"
 
 	// Cleanup first
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 	matches, _ := filepath.Glob(testFile + "*")
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 
 	logger := &Logger{
@@ -1521,7 +1521,7 @@ func TestCompression_GzipRotatedFiles(t *testing.T) {
 		MaxSize:  1,    // 1MB to trigger rotation quickly
 		Compress: true, // Enable compression
 	}
-	defer logger.Close() // Ensure cleanup
+	defer func() { _ = logger.Close() }() // Ensure cleanup
 
 	// Write large chunk to trigger rotation
 	largeChunk := make([]byte, 2*1024*1024) // 2MB
@@ -1570,10 +1570,10 @@ func TestCompression_GzipRotatedFiles(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
-	os.Remove(testFile)
+	_ = logger.Close()
+	_ = os.Remove(testFile)
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 }
 
@@ -1582,10 +1582,10 @@ func TestCompression_DisabledByDefault(t *testing.T) {
 	testFile := "test_no_compression.log"
 
 	// Cleanup first
-	os.Remove(testFile)
+	_ = os.Remove(testFile)
 	matches, _ := filepath.Glob(testFile + "*")
 	for _, match := range matches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 
 	logger := &Logger{
@@ -1629,10 +1629,10 @@ func TestCompression_DisabledByDefault(t *testing.T) {
 	}
 
 	// Cleanup
-	logger.Close()
-	os.Remove(testFile)
+	_ = logger.Close()
+	_ = os.Remove(testFile)
 	for _, match := range allMatches {
-		os.Remove(match)
+		_ = os.Remove(match)
 	}
 }
 
@@ -1680,7 +1680,7 @@ func TestCleanup_MaxBackupsOrdering(t *testing.T) {
 		}
 	}
 
-	logger.Close()
+	_ = logger.Close()
 }
 
 func TestMPSC_BasicFunctionality(t *testing.T) {
@@ -1705,7 +1705,7 @@ func TestMPSC_BasicFunctionality(t *testing.T) {
 	}
 
 	// Flush and close to ensure data is written
-	logger.Close()
+	_ = logger.Close()
 
 	// Verify data was actually written to file
 	content, err := os.ReadFile(testFile)
@@ -1758,7 +1758,7 @@ func TestMPSC_HighThroughput(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Close and flush
-	logger.Close()
+	_ = logger.Close()
 
 	// Verify all data was written
 	content, err := os.ReadFile(testFile)
@@ -1786,7 +1786,7 @@ func TestWorkerPool_BackgroundOperations(t *testing.T) {
 		MaxBackups: 2,
 		Compress:   true,
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Trigger many rotations to test worker pool efficiency
 	const numRotations = 10
@@ -1823,7 +1823,7 @@ func TestAutoScaling_LatencyBased(t *testing.T) {
 		MaxSize:  100,
 		// Note: Async is false, we want auto-scaling to kick in
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Perform enough writes to reach the minimum sample size
 	for i := 0; i < 150; i++ {
@@ -1870,7 +1870,7 @@ func TestErrorCallback_CustomHandling(t *testing.T) {
 			capturedErrors = append(capturedErrors, fmt.Sprintf("%s: %v", operation, err))
 		},
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Normal operation should not trigger errors
 	_, err := logger.Write([]byte("Normal log entry\n"))
@@ -1919,7 +1919,7 @@ func TestControlledShutdown_WaitGroup(t *testing.T) {
 
 	// Close should wait for all data to be flushed
 	start := time.Now()
-	logger.Close()
+	_ = logger.Close()
 	shutdownTime := time.Since(start)
 
 	t.Logf("Shutdown took %v", shutdownTime)
@@ -1950,7 +1950,7 @@ func TestCrossPlatform_FileLocking(t *testing.T) {
 		Filename: testFile,
 		MaxSize:  1, // Small size to trigger frequent rotations
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// On Windows, file operations can be more restrictive
 	// Test rapid rotation cycles that might cause locking issues
@@ -2028,9 +2028,9 @@ func TestCrossPlatform_PathValidation(t *testing.T) {
 				}
 			}
 
-			logger.Close()
+			_ = logger.Close()
 			if test.valid {
-				os.Remove(testPath)
+				_ = os.Remove(testPath)
 			}
 		})
 	}
@@ -2045,7 +2045,7 @@ func TestCrossPlatform_FilePermissions(t *testing.T) {
 		Filename: testFile,
 		MaxSize:  100,
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	_, err := logger.Write([]byte("Permission test\n"))
@@ -2214,7 +2214,7 @@ func TestAutoScaling_SyncToMPSC(t *testing.T) {
 	duration := time.Since(startTime)
 	t.Logf("High-load test completed in %v", duration)
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Verify data integrity
 	content, err := os.ReadFile(testFile)
@@ -2264,7 +2264,7 @@ func TestConfigurableBufferSize(t *testing.T) {
 				t.Errorf("Expected success, got error: %v", err)
 			}
 
-			logger.Close()
+			_ = logger.Close()
 		})
 	}
 }
@@ -2331,7 +2331,7 @@ func TestInvalidPermissions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	// Remove write permissions
 	err = os.Chmod(tempDir, 0555) // Read and execute only
@@ -2357,7 +2357,7 @@ func TestInvalidPermissions(t *testing.T) {
 
 	// Restore permissions for cleanup
 	_ = os.Chmod(tempDir, 0755) // Ignore error for cleanup
-	logger.Close()
+	_ = logger.Close()
 }
 
 // TestVeryLargeFiles tests handling of large log files
@@ -2395,7 +2395,7 @@ func TestVeryLargeFiles(t *testing.T) {
 		}
 	}
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Verify that files were created and rotations occurred
 	pattern := testFile + "*"
@@ -2447,7 +2447,7 @@ func TestHighFrequencyRotation(t *testing.T) {
 
 	// Wait for background tasks to complete before closing
 	logger.WaitForBackgroundTasks()
-	logger.Close()
+	_ = logger.Close()
 
 	// Allow final file operations to complete
 	time.Sleep(50 * time.Millisecond)
@@ -2508,7 +2508,7 @@ func TestDiskSpaceHandling(t *testing.T) {
 		t.Logf("Large write failed as expected: %v", err)
 	}
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Verify error callback was properly called if there were issues
 	t.Logf("Error callback invoked %d times", errorCount)
@@ -2566,7 +2566,7 @@ func TestConcurrentRotationStress(t *testing.T) {
 	// Allow pending async operations to complete before closing
 	time.Sleep(100 * time.Millisecond)
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Allow background operations to complete
 	time.Sleep(200 * time.Millisecond)
@@ -2632,7 +2632,7 @@ func TestMaxSizeString(t *testing.T) {
 				t.Errorf("Expected success with %s, got error: %v", tt.maxSizeStr, err)
 			}
 
-			logger.Close()
+			_ = logger.Close()
 
 			// Check for rotations if expected
 			if tt.expectedOk && tt.minRotations > 0 {
@@ -2669,7 +2669,7 @@ func TestBackpressurePolicies(t *testing.T) {
 				_, _ = logger.Write([]byte(data)) // Ignore errors in stress test
 			}
 
-			logger.Close()
+			_ = logger.Close()
 
 			// All policies should complete without panic
 			t.Logf("Policy %s completed successfully", policy)
@@ -2725,7 +2725,7 @@ func TestTelemetryAPI(t *testing.T) {
 	t.Logf("Stats: WriteCount=%d, TotalBytes=%d, AvgLatency=%dns, ContentionRatio=%.3f",
 		stats.WriteCount, stats.TotalBytes, stats.AvgLatencyNs, stats.ContentionRatio)
 
-	logger.Close()
+	_ = logger.Close()
 }
 
 // TestMaxFileAge tests age-based file cleanup
@@ -2757,7 +2757,7 @@ func TestMaxFileAge(t *testing.T) {
 	data := make([]byte, 1500)
 	_, _ = logger.Write(data) // Ignore errors in test
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Allow background cleanup to complete
 	time.Sleep(100 * time.Millisecond)
@@ -2805,7 +2805,7 @@ func TestCrashConsistency(t *testing.T) {
 	// Allow background compression to start
 	time.Sleep(100 * time.Millisecond)
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Allow compression to complete
 	time.Sleep(500 * time.Millisecond)
@@ -2861,7 +2861,7 @@ func TestDropPolicy(t *testing.T) {
 	// Get stats
 	stats := logger.Stats()
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Should have some dropped messages due to small buffer and rapid writes
 	t.Logf("Stats: WriteCount=%d, DroppedOnFull=%d, BufferSize=%d, BufferFill=%d",
@@ -2904,7 +2904,7 @@ func TestWriteOwned(t *testing.T) {
 		t.Error("Expected non-zero write count")
 	}
 
-	logger.Close()
+	_ = logger.Close()
 
 	t.Logf("WriteOwned test completed successfully")
 }
@@ -2931,7 +2931,7 @@ func TestLocalTimeAndChecksums(t *testing.T) {
 	// Allow processing
 	time.Sleep(200 * time.Millisecond)
 
-	logger.Close()
+	_ = logger.Close()
 
 	// Check for backup files and checksums
 	pattern := testFile + ".*"
@@ -3083,7 +3083,7 @@ func TestLoadFromJSON(t *testing.T) {
 func TestLoadFromJSONFile(t *testing.T) {
 	// Create temporary JSON file
 	tempFile := filepath.Join(os.TempDir(), "test_config.json")
-	defer os.Remove(tempFile)
+	defer func() { _ = os.Remove(tempFile) }()
 
 	jsonContent := `{
 		"filename": "file_test.log",
@@ -3246,14 +3246,14 @@ func TestLoadFromEnv(t *testing.T) {
 			if val, exists := os.LookupEnv(key); exists {
 				originalEnv[key] = val
 			}
-			os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		}
 	}
 
 	defer func() {
 		// Restore original environment
 		for key, val := range originalEnv {
-			os.Setenv(key, val)
+			_ = os.Setenv(key, val)
 		}
 	}()
 
@@ -3261,7 +3261,7 @@ func TestLoadFromEnv(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set test environment variables
 			for key, val := range tt.envVars {
-				os.Setenv(key, val)
+				_ = os.Setenv(key, val)
 			}
 
 			config, err := LoadFromEnv(tt.prefix)
@@ -3286,7 +3286,7 @@ func TestLoadFromEnv(t *testing.T) {
 
 			// Clean up test variables after each subtest
 			for key := range tt.envVars {
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			}
 		})
 	}
@@ -3296,7 +3296,7 @@ func TestLoadFromEnv(t *testing.T) {
 func TestLoadFromSources(t *testing.T) {
 	// Create temporary JSON file
 	tempFile := filepath.Join(os.TempDir(), "combined_test.json")
-	defer os.Remove(tempFile)
+	defer func() { _ = os.Remove(tempFile) }()
 
 	jsonContent := `{
 		"filename": "json_test.log",
@@ -3321,10 +3321,10 @@ func TestLoadFromSources(t *testing.T) {
 	}
 	defer func() {
 		for _, key := range envVars {
-			os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		}
 		for key, val := range originalEnv {
-			os.Setenv(key, val)
+			_ = os.Setenv(key, val)
 		}
 	}()
 
@@ -3485,7 +3485,7 @@ func TestLoadFromSources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set test environment variables
 			for key, val := range tt.envVars {
-				os.Setenv(key, val)
+				_ = os.Setenv(key, val)
 			}
 
 			config, err := LoadFromSources(tt.source)
@@ -3524,7 +3524,7 @@ func TestWriteAsyncOwnedEdgeCases(t *testing.T) {
 			BackpressurePolicy: "drop",
 			BufferSize:         1, // Very small buffer to force overflow
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Small data that should fit in buffer
 		smallData := []byte("test\n")
@@ -3574,7 +3574,7 @@ func TestWriteAsyncOwnedEdgeCases(t *testing.T) {
 			BackpressurePolicy: "adaptive",
 			BufferSize:         2, // Small buffer that can be resized
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("test adaptive policy\n")
 
@@ -3606,7 +3606,7 @@ func TestWriteAsyncOwnedEdgeCases(t *testing.T) {
 			BackpressurePolicy: "fallback", // Default policy
 			BufferSize:         1,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("test fallback policy\n")
 
@@ -3633,7 +3633,7 @@ func TestWriteAsyncOwnedEdgeCases(t *testing.T) {
 			Async:      true,
 			BufferSize: 0, // Invalid buffer size to force init failure
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("test init failure fallback\n")
 
@@ -3654,7 +3654,7 @@ func TestWriteAsyncOwnedEdgeCases(t *testing.T) {
 			MaxSize:  1,
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Manually set buffer to nil to test fallback
 		logger.buffer.Store(nil)
@@ -3685,7 +3685,7 @@ func TestRotationTriggerAndPerform(t *testing.T) {
 			MaxBackups: 5,
 			Compress:   true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Initialize the logger
 		if err := logger.initFile(); err != nil {
@@ -3721,7 +3721,7 @@ func TestRotationTriggerAndPerform(t *testing.T) {
 			MaxSizeStr: "1KB",
 			MaxBackups: 5,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -3753,7 +3753,7 @@ func TestRotationTriggerAndPerform(t *testing.T) {
 			Filename:   testFile + "_no_file",
 			MaxSizeStr: "1KB",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Don't initialize file, so currentFile is nil
 		err := logger.performRotation()
@@ -3773,7 +3773,7 @@ func TestRotationTriggerAndPerform(t *testing.T) {
 			Compress:   true,
 			Checksum:   true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -3799,7 +3799,7 @@ func TestRotationTriggerAndPerform(t *testing.T) {
 			Filename:  testFile + "_local",
 			LocalTime: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		backupName := logger.generateBackupName()
 
@@ -3819,7 +3819,7 @@ func TestRotationTriggerAndPerform(t *testing.T) {
 			Filename:  testFile + "_utc",
 			LocalTime: false, // UTC time
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		backupName := logger.generateBackupName()
 
@@ -3847,7 +3847,7 @@ func TestCompressionAndBackgroundTasks(t *testing.T) {
 			Compress:   true,
 			MaxBackups: 5,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -3888,7 +3888,7 @@ func TestCompressionAndBackgroundTasks(t *testing.T) {
 			MaxBackups: 5,
 			Compress:   true, // Enable compression to trigger background tasks
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Initialize background workers
 		if err := logger.initFile(); err != nil {
@@ -3987,7 +3987,7 @@ func TestBackpressureAndEdgeCases(t *testing.T) {
 			BackpressurePolicy: "drop",
 			BufferSize:         100, // Small buffer to force backpressure
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4013,7 +4013,7 @@ func TestBackpressureAndEdgeCases(t *testing.T) {
 			BackpressurePolicy: "fallback",
 			BufferSize:         100, // Small buffer
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4038,7 +4038,7 @@ func TestBackpressureAndEdgeCases(t *testing.T) {
 			MaxBackups: 5,
 			LocalTime:  true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4070,7 +4070,7 @@ func TestBackpressureAndEdgeCases(t *testing.T) {
 		logger := &Logger{
 			Filename: testFile + "_retry",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Test default retry configuration
 		retryCount, retryDelay, fileMode := logger.getRetryConfig()
@@ -4096,7 +4096,7 @@ func TestBackpressureAndEdgeCases(t *testing.T) {
 			RetryDelay: 50 * time.Millisecond,
 			FileMode:   0640,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		retryCount, retryDelay, fileMode := logger.getRetryConfig()
 
@@ -4141,7 +4141,7 @@ func TestBackpressureAndEdgeCases(t *testing.T) {
 		logger := &Logger{
 			Filename: testFile + "_error",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Test error reporting (capture output or check that no panic occurs)
 		logger.reportError("test_operation", fmt.Errorf("test error"))
@@ -4254,7 +4254,7 @@ func TestExtendedUtilityFunctions(t *testing.T) {
 			Filename:  testFile + "_timecache",
 			LocalTime: true, // Enable time cache
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Test time cache lazy initialization
 		if err := logger.initFile(); err != nil {
@@ -4280,7 +4280,7 @@ func TestExtendedUtilityFunctions(t *testing.T) {
 			FlushInterval: 100 * time.Millisecond,
 			Async:         true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4305,7 +4305,7 @@ func TestExtendedUtilityFunctions(t *testing.T) {
 			AdaptiveFlush: true,
 			Async:         true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4322,7 +4322,7 @@ func TestExtendedUtilityFunctions(t *testing.T) {
 			Filename: testFile + "_checksum",
 			Checksum: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4346,7 +4346,7 @@ func TestExtendedUtilityFunctions(t *testing.T) {
 			MaxSizeStr: "10KB",
 			Async:      true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4377,7 +4377,7 @@ func TestExtendedUtilityFunctions(t *testing.T) {
 			Async:      true,
 			BufferSize: -1, // Invalid buffer size to force fallback
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4444,7 +4444,7 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 		}
 
 		// Close to shutdown workers
-		logger.Close()
+		_ = logger.Close()
 
 		// Now try to submit a task - should not panic (57.1% coverage issue)
 		task := BackgroundTask{
@@ -4465,7 +4465,7 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 			MaxSizeStr: "1KB",
 			Compress:   true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4494,7 +4494,7 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 			BufferSize:    100, // Small buffer
 			FlushInterval: 50 * time.Millisecond,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4519,7 +4519,7 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 			BufferSize:         50, // Very small buffer
 			BackpressurePolicy: "drop",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4544,13 +4544,13 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 		originalEnv := os.Getenv("TEST_PARTIAL_FILENAME")
 		defer func() {
 			if originalEnv != "" {
-				os.Setenv("TEST_PARTIAL_FILENAME", originalEnv)
+				_ = os.Setenv("TEST_PARTIAL_FILENAME", originalEnv)
 			} else {
-				os.Unsetenv("TEST_PARTIAL_FILENAME")
+				_ = os.Unsetenv("TEST_PARTIAL_FILENAME")
 			}
 		}()
 
-		os.Setenv("TEST_PARTIAL_FILENAME", testFile+"_partial.log")
+		_ = os.Setenv("TEST_PARTIAL_FILENAME", testFile+"_partial.log")
 
 		config, err := LoadFromEnv("TEST_PARTIAL")
 		if err != nil {
@@ -4573,7 +4573,7 @@ func TestCriticalFunctionsCoverage(t *testing.T) {
 			Checksum:   true,
 			MaxSizeStr: "1KB",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4608,7 +4608,7 @@ func TestWriteAsyncOwned_Coverage(t *testing.T) {
 			BackpressurePolicy: "drop",
 			BufferSize:         50, // Very small buffer
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4637,7 +4637,7 @@ func TestWriteAsyncOwned_Coverage(t *testing.T) {
 			BackpressurePolicy: "fallback",
 			BufferSize:         50,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4663,7 +4663,7 @@ func TestWriteAsyncOwned_Coverage(t *testing.T) {
 			BufferSize:         50,
 			AdaptiveFlush:      true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4689,7 +4689,7 @@ func TestWriteAsyncOwned_Coverage(t *testing.T) {
 			BufferSize: 50,
 			// No BackpressurePolicy set - should use default "fallback"
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4711,7 +4711,7 @@ func TestWriteAsyncOwned_Coverage(t *testing.T) {
 			Async:      true,
 			BufferSize: -1, // Invalid buffer size to force init failure
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4743,7 +4743,7 @@ func TestAdjustFlushTiming_Coverage(t *testing.T) {
 			FlushInterval: 50 * time.Millisecond,
 			AdaptiveFlush: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4771,7 +4771,7 @@ func TestAdjustFlushTiming_Coverage(t *testing.T) {
 			FlushInterval: 50 * time.Millisecond,
 			AdaptiveFlush: false, // Disable adaptive flush
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4804,7 +4804,7 @@ func TestCompressFile_ErrorPaths(t *testing.T) {
 		}
 
 		// Close the logger to simulate file already closed scenario
-		logger.Close()
+		_ = logger.Close()
 
 		// Try to trigger compression on closed file
 		// This should handle the error gracefully
@@ -4823,7 +4823,7 @@ func TestCompressFile_ErrorPaths(t *testing.T) {
 			Compress:   true,
 			MaxSizeStr: "1KB",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4841,7 +4841,7 @@ func TestCompressFile_ErrorPaths(t *testing.T) {
 		}
 
 		// Shutdown background workers immediately
-		logger.Close()
+		_ = logger.Close()
 
 		t.Logf("Background compression failure test completed")
 	})
@@ -4859,7 +4859,7 @@ func TestFinalCoveragePush(t *testing.T) {
 			BackpressurePolicy: "drop",
 			BufferSize:         10, // Extremely small buffer
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4922,7 +4922,7 @@ func TestFinalCoveragePush(t *testing.T) {
 			MaxSizeStr: "1KB",
 			MaxBackups: 10,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -4956,7 +4956,7 @@ func TestFinalCoveragePush(t *testing.T) {
 				prefix + "_FILENAME", prefix + "_MAX_SIZE", prefix + "_COMPRESS",
 			}
 			for _, key := range envKeys {
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			}
 		}
 
@@ -4973,9 +4973,9 @@ func TestFinalCoveragePush(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			os.Setenv(tc.prefix+"_FILENAME", tc.filename)
-			os.Setenv(tc.prefix+"_MAX_SIZE", tc.size)
-			os.Setenv(tc.prefix+"_COMPRESS", tc.compress)
+			_ = os.Setenv(tc.prefix+"_FILENAME", tc.filename)
+			_ = os.Setenv(tc.prefix+"_MAX_SIZE", tc.size)
+			_ = os.Setenv(tc.prefix+"_COMPRESS", tc.compress)
 
 			config, err := LoadFromEnv(tc.prefix)
 			if err != nil {
@@ -4988,9 +4988,9 @@ func TestFinalCoveragePush(t *testing.T) {
 			}
 
 			// Clean up for next test
-			os.Unsetenv(tc.prefix + "_FILENAME")
-			os.Unsetenv(tc.prefix + "_MAX_SIZE")
-			os.Unsetenv(tc.prefix + "_COMPRESS")
+			_ = os.Unsetenv(tc.prefix + "_FILENAME")
+			_ = os.Unsetenv(tc.prefix + "_MAX_SIZE")
+			_ = os.Unsetenv(tc.prefix + "_COMPRESS")
 		}
 
 		t.Logf("Multiple prefixes test completed")
@@ -5017,7 +5017,7 @@ func TestFinalCoveragePush(t *testing.T) {
 		}
 
 		// Cleanup
-		os.Remove(tempFile)
+		_ = os.Remove(tempFile)
 	})
 
 	t.Run("SanitizeFilename_SpecialChars", func(t *testing.T) {
@@ -5091,7 +5091,7 @@ func TestFileOperationsOSAware(t *testing.T) {
 			MaxSize:  1,
 			FileMode: expectedMode,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write something to create the file
 		data := []byte("test file mode\n")
@@ -5204,7 +5204,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 			Async:      true,
 			BufferSize: -1, // This should cause initMPSC to fail
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5231,7 +5231,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 			Filename: testFile + "_nil_after_init",
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5260,7 +5260,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 			BackpressurePolicy: "adaptive",
 			BufferSize:         10, // Very small buffer
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5280,7 +5280,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 			Filename: testFile + "_compress_open_fail",
 			Compress: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Try to compress a non-existent file
 		nonExistentFile := "/completely/nonexistent/path/file.log"
@@ -5295,7 +5295,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 			Filename: testFile + "_compress_create_fail",
 			Compress: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5321,7 +5321,7 @@ func TestUltraCriticalCoverage(t *testing.T) {
 			Filename: testFile + "_compress_rename_fail",
 			Compress: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5443,7 +5443,7 @@ func TestDirectFunctionCalls(t *testing.T) {
 			Async:      true,
 			BufferSize: 0, // Zero buffer size should cause issues
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5472,7 +5472,7 @@ func TestDirectFunctionCalls(t *testing.T) {
 			Filename: testFile + "_compress_direct",
 			Compress: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Test direct call to compressFile with invalid path
 		// This should trigger the error reporting path
@@ -5489,7 +5489,7 @@ func TestDirectFunctionCalls(t *testing.T) {
 			Filename: testFile + "_checksum_invalid",
 			Checksum: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5515,7 +5515,7 @@ func TestExtremeEdgeCases(t *testing.T) {
 			Async:      true,
 			BufferSize: 100,
 		}
-		defer logger1.Close()
+		defer func() { _ = logger1.Close() }()
 
 		if err := logger1.initFile(); err != nil {
 			t.Fatalf("Failed to init file 1: %v", err)
@@ -5534,7 +5534,7 @@ func TestExtremeEdgeCases(t *testing.T) {
 			BufferSize:         10,
 			BackpressurePolicy: "drop",
 		}
-		defer logger2.Close()
+		defer func() { _ = logger2.Close() }()
 
 		if err := logger2.initFile(); err != nil {
 			t.Fatalf("Failed to init file 2: %v", err)
@@ -5552,7 +5552,7 @@ func TestExtremeEdgeCases(t *testing.T) {
 			BufferSize:         10,
 			BackpressurePolicy: "adaptive",
 		}
-		defer logger3.Close()
+		defer func() { _ = logger3.Close() }()
 
 		if err := logger3.initFile(); err != nil {
 			t.Fatalf("Failed to init file 3: %v", err)
@@ -5573,7 +5573,7 @@ func TestExtremeEdgeCases(t *testing.T) {
 			Compress:   true,
 			MaxSizeStr: "1KB",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5702,7 +5702,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			Async:      true,
 			BufferSize: 0, // This should cause initMPSC to use default 1024
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Manually set buffer to nil to force init attempt
 		logger.buffer.Store((*ringBuffer)(nil))
@@ -5726,7 +5726,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			Filename: testFile + "_nil_after_init",
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5755,7 +5755,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			BackpressurePolicy: "drop",
 			BufferSize:         5, // Very small buffer
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5793,7 +5793,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			BackpressurePolicy: "adaptive",
 			BufferSize:         10, // Small buffer that can be resized
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5823,7 +5823,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			BackpressurePolicy: "adaptive",
 			BufferSize:         16384, // Already at max size (16K)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5851,7 +5851,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			BackpressurePolicy: "", // Empty = default fallback
 			BufferSize:         5,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5877,7 +5877,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			Filename: testFile + "_race",
 			Async:    true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -5913,7 +5913,7 @@ func TestWriteAsyncOwned_UltraSpecific(t *testing.T) {
 			Async:      true,
 			BufferSize: 1, // Minimal buffer
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6031,7 +6031,7 @@ func TestCompressFile_Comprehensive(t *testing.T) {
 			Compress:   true,
 			MaxSizeStr: "1KB",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6063,7 +6063,7 @@ func TestCompressFile_Comprehensive(t *testing.T) {
 			Filename: testFile + "_compress_exists",
 			Compress: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6074,7 +6074,7 @@ func TestCompressFile_Comprehensive(t *testing.T) {
 		if err := os.WriteFile(conflictFile, []byte("existing"), 0644); err != nil {
 			t.Fatalf("Failed to create conflict file: %v", err)
 		}
-		defer os.Remove(conflictFile)
+		defer func() { _ = os.Remove(conflictFile) }()
 
 		// Write data and try to compress
 		data := []byte("test data")
@@ -6095,7 +6095,7 @@ func TestCompressFile_Comprehensive(t *testing.T) {
 			Filename: testFile + "_compress_perm",
 			Compress: true,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6121,7 +6121,7 @@ func TestCompressFile_Comprehensive(t *testing.T) {
 			Compress:   true,
 			MaxSizeStr: "10KB",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6155,7 +6155,7 @@ func TestCompressFile_Comprehensive(t *testing.T) {
 			MaxSizeStr: "2KB",
 			MaxBackups: 5,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6195,7 +6195,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 			Async:      true,
 			BufferSize: 1, // Minimal buffer to maximize race conditions
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Start multiple goroutines that will compete for buffer initialization
 		done := make(chan bool, 10)
@@ -6228,7 +6228,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 			BufferSize:         2, // Extremely small buffer
 			BackpressurePolicy: "adaptive",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6261,7 +6261,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 			BufferSize:         16383, // Just under max size to test resize limits
 			BackpressurePolicy: "adaptive",
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6284,7 +6284,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 			BufferSize:         5,
 			BackpressurePolicy: "drop", // Start with drop
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		if err := logger.initFile(); err != nil {
 			t.Fatalf("Failed to init file: %v", err)
@@ -6326,7 +6326,7 @@ func TestWriteAsyncOwned_AdvancedAPI(t *testing.T) {
 		}
 
 		// Test teardown
-		logger.Close()
+		_ = logger.Close()
 
 		// Test write after close (should handle gracefully)
 		_, err := logger.Write([]byte("after_close"))
@@ -6435,7 +6435,7 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 		if err := os.WriteFile(tempFile, []byte(validJSON), 0644); err != nil {
 			t.Fatalf("Failed to create test JSON file: %v", err)
 		}
-		defer os.Remove(tempFile)
+		defer func() { _ = os.Remove(tempFile) }()
 
 		config, err := LoadFromJSONFile(tempFile)
 		if err != nil {
@@ -6456,7 +6456,7 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 		if err := os.WriteFile(invalidJSONFile, []byte("{invalid json"), 0644); err != nil {
 			t.Fatalf("Failed to create invalid JSON file: %v", err)
 		}
-		defer os.Remove(invalidJSONFile)
+		defer func() { _ = os.Remove(invalidJSONFile) }()
 
 		_, err = LoadFromJSONFile(invalidJSONFile)
 		if err == nil {
@@ -6469,7 +6469,7 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 		if err := os.WriteFile(noFilenameFile, []byte(missingFilenameJSON), 0644); err != nil {
 			t.Fatalf("Failed to create no-filename JSON file: %v", err)
 		}
-		defer os.Remove(noFilenameFile)
+		defer func() { _ = os.Remove(noFilenameFile) }()
 
 		_, err = LoadFromJSONFile(noFilenameFile)
 		if err == nil {
@@ -6485,11 +6485,11 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 			prefix + "_MAX_BACKUPS", prefix + "_ASYNC",
 		}
 		for _, key := range envKeys {
-			os.Unsetenv(key)
+			_ = os.Unsetenv(key)
 		}
 		defer func() {
 			for _, key := range envKeys {
-				os.Unsetenv(key)
+				_ = os.Unsetenv(key)
 			}
 		}()
 
@@ -6500,11 +6500,11 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 		}
 
 		// Test with valid environment variables
-		os.Setenv(prefix+"_FILENAME", "env_test.log")
-		os.Setenv(prefix+"_MAX_SIZE", "5MB")
-		os.Setenv(prefix+"_COMPRESS", "true")
-		os.Setenv(prefix+"_MAX_BACKUPS", "10")
-		os.Setenv(prefix+"_ASYNC", "false")
+		_ = os.Setenv(prefix+"_FILENAME", "env_test.log")
+		_ = os.Setenv(prefix+"_MAX_SIZE", "5MB")
+		_ = os.Setenv(prefix+"_COMPRESS", "true")
+		_ = os.Setenv(prefix+"_MAX_BACKUPS", "10")
+		_ = os.Setenv(prefix+"_ASYNC", "false")
 
 		config, err := LoadFromEnv(prefix)
 		if err != nil {
@@ -6515,19 +6515,19 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 		}
 
 		// Test with invalid values
-		os.Setenv(prefix+"_COMPRESS", "not_a_bool")
+		_ = os.Setenv(prefix+"_COMPRESS", "not_a_bool")
 		_, err = LoadFromEnv(prefix)
 		if err == nil {
 			t.Error("LoadFromEnv should fail with invalid boolean")
 		}
 
-		os.Setenv(prefix+"_MAX_BACKUPS", "not_a_number")
+		_ = os.Setenv(prefix+"_MAX_BACKUPS", "not_a_number")
 		_, err = LoadFromEnv(prefix)
 		if err == nil {
 			t.Error("LoadFromEnv should fail with invalid integer")
 		}
 
-		os.Setenv(prefix+"_MAX_SIZE", "invalid_duration")
+		_ = os.Setenv(prefix+"_MAX_SIZE", "invalid_duration")
 		_, err = LoadFromEnv(prefix)
 		if err == nil {
 			t.Error("LoadFromEnv should fail with invalid duration")
@@ -6674,15 +6674,15 @@ func TestCompleteCoverageSimpleFunctions(t *testing.T) {
 		if err := os.WriteFile(jsonFile, []byte(jsonContent), 0644); err != nil {
 			t.Fatalf("Failed to create JSON file: %v", err)
 		}
-		defer os.Remove(jsonFile)
+		defer func() { _ = os.Remove(jsonFile) }()
 
 		// Set up environment variables
 		envPrefix := "SOURCES"
-		os.Setenv(envPrefix+"_MAX_BACKUPS", "10")
-		os.Setenv(envPrefix+"_ASYNC", "true")
+		_ = os.Setenv(envPrefix+"_MAX_BACKUPS", "10")
+		_ = os.Setenv(envPrefix+"_ASYNC", "true")
 		defer func() {
-			os.Unsetenv(envPrefix + "_MAX_BACKUPS")
-			os.Unsetenv(envPrefix + "_ASYNC")
+			_ = os.Unsetenv(envPrefix + "_MAX_BACKUPS")
+			_ = os.Unsetenv(envPrefix + "_ASYNC")
 		}()
 
 		// Test with all sources

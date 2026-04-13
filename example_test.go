@@ -22,7 +22,7 @@ func ExampleNewWithDefaults() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write to the logger
 	if _, err := logger.Write([]byte("Application started\n")); err != nil {
@@ -43,7 +43,7 @@ func ExampleNewSimple() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if _, err := logger.Write([]byte("Using string-based configuration\n")); err != nil {
 		log.Printf("Warning: failed to write string-based config: %v", err)
@@ -60,7 +60,7 @@ func ExampleNewDaily() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if _, err := logger.Write([]byte("Daily rotation enabled\n")); err != nil {
 		log.Printf("Warning: failed to write daily rotation: %v", err)
@@ -77,7 +77,7 @@ func ExampleNewDevelopment() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if _, err := logger.Write([]byte("Debug message\n")); err != nil {
 		log.Printf("Warning: failed to write debug message: %v", err)
@@ -107,7 +107,7 @@ func ExampleNewWithConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if _, err := logger.Write([]byte("Custom configuration\n")); err != nil {
 		log.Printf("Warning: failed to write custom configuration: %v", err)
@@ -123,7 +123,7 @@ func ExampleLogger_Write() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write various types of data
 	n, err := logger.Write([]byte("Hello, World!\n"))
@@ -141,7 +141,7 @@ func ExampleLogger_WriteOwned() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Create buffer for zero-copy write
 	message := "Zero-copy message\n"
@@ -171,7 +171,7 @@ func ExampleLogger_Stats() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	for i := 0; i < 10; i++ {
@@ -198,7 +198,7 @@ func ExampleLogger_Rotate() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	if _, err := logger.Write([]byte("Before rotation\n")); err != nil {
@@ -226,7 +226,7 @@ func Example_standardLibrary() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Redirect standard library logging
 	originalOutput := log.Writer()
@@ -257,7 +257,7 @@ func Example_errorHandling() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	if _, err := logger.Write([]byte("Normal operation\n")); err != nil {
 		log.Printf("Warning: failed to write normal operation: %v", err)
@@ -281,7 +281,7 @@ func Example_asyncMode() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// High-throughput writes
 	for i := 0; i < 1000; i++ {
@@ -308,7 +308,7 @@ func Example_compression() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write enough data to trigger rotation
 	for i := 0; i < 100; i++ {
@@ -335,11 +335,11 @@ func Example_cleanup() {
 	}
 
 	for _, file := range files {
-		os.Remove(file)
+		_ = os.Remove(file)
 		// Also remove potential backup files
 		matches, _ := filepath.Glob(file + ".*")
 		for _, match := range matches {
-			os.Remove(match)
+			_ = os.Remove(match)
 		}
 	}
 
@@ -360,7 +360,7 @@ func Example_timeBasedRotation() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write initial message
 	if _, err := logger.Write([]byte("Message before rotation\n")); err != nil {

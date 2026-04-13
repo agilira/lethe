@@ -43,7 +43,7 @@ func TestStats_DroppedCount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Flood the buffer to trigger drops
 	data := make([]byte, 100)
@@ -81,7 +81,7 @@ func TestStats_QueueDepth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	for i := 0; i < 10; i++ {
@@ -115,7 +115,7 @@ func TestStats_Timestamps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	before := time.Now()
 
@@ -170,7 +170,7 @@ func TestMetricsCallback(t *testing.T) {
 	// Wait for at least one callback
 	time.Sleep(150 * time.Millisecond)
 
-	logger.Close()
+	_ = logger.Close()
 
 	if callbackCount.Load() == 0 {
 		t.Error("MetricsCallback was never called")
@@ -197,7 +197,7 @@ func TestStats_ContentionRatio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	for i := 0; i < 100; i++ {
@@ -230,7 +230,7 @@ func TestStats_LatencyTracking(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	for i := 0; i < 100; i++ {

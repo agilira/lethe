@@ -38,7 +38,7 @@ func TestWriteAsyncOwned_MissingBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write to trigger initMPSC with negative buffer size
 		data := []byte("test buffer negative")
@@ -64,7 +64,7 @@ func TestWriteAsyncOwned_MissingBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Pre-initialize the buffer
 		testData := []byte("init")
@@ -329,8 +329,8 @@ func TestLoadFromEnv_CompleteCoverage(t *testing.T) {
 
 		// Set environment variables
 		for key, value := range envVars {
-			os.Setenv(key, value)
-			defer os.Unsetenv(key)
+			_ = os.Setenv(key, value)
+			defer func() { _ = os.Unsetenv(key) }()
 		}
 
 		config, err := LoadFromEnv(prefix)
@@ -396,7 +396,7 @@ func TestSafeSubmitTask_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Ensure that bgWorkers is nil to test that branch
 		// Call safeSubmitTask before workers are initialized
@@ -421,7 +421,7 @@ func TestSafeSubmitTask_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write something to trigger rotation and initialize workers
 		data := make([]byte, 2000) // Large data to trigger rotation
@@ -457,7 +457,7 @@ func TestGenerateChecksum_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Test generateChecksum with non-existent file
 		nonExistentFile := filepath.Join(tempDir, "nonexistent.log")
@@ -473,7 +473,7 @@ func TestGenerateChecksum_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create a valid file with known content
 		testFile := filepath.Join(tempDir, "test_content.log")
@@ -503,7 +503,7 @@ func TestGenerateChecksum_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create a file and remove read permissions (Unix only)
 		testFile := filepath.Join(tempDir, "no_read_perm.log")
@@ -528,7 +528,7 @@ func TestCompressFile_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Test compressFile with non-existent file
 		nonExistentFile := filepath.Join(tempDir, "nonexistent.log")
@@ -544,7 +544,7 @@ func TestCompressFile_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create a valid file with compressible content
 		testFile := filepath.Join(tempDir, "test_content.log")
@@ -570,7 +570,7 @@ func TestCompressFile_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create source file and compressed file that already exists
 		testFile := filepath.Join(tempDir, "test_source.log")
@@ -603,7 +603,7 @@ func TestCompressFile_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create source file
 		testFile := filepath.Join(tempDir, "test_source.log")
@@ -642,7 +642,7 @@ func TestCreateLogDirectory_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write to trigger createLogDirectory
 		_, err = logger.Write([]byte("test with existing directory"))
@@ -660,7 +660,7 @@ func TestCreateLogDirectory_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write to trigger createLogDirectory with nested directories
 		_, err = logger.Write([]byte("test with nested directories"))
@@ -696,7 +696,7 @@ func TestCreateLogDirectory_CompleteCoverage(t *testing.T) {
 			t.Logf("Logger creation failed as expected: %v", err)
 			return
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// If the logger has been created, test the writing
 		_, err = logger.Write([]byte("test with permission error"))
@@ -853,7 +853,7 @@ func TestInitFileState_CompleteCoverage(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Create a file and then close it to cause error in Stat
 		tempFile := filepath.Join(tempDir, "closed_file.log")
@@ -863,7 +863,7 @@ func TestInitFileState_CompleteCoverage(t *testing.T) {
 		}
 
 		// Close the file to cause error when initFileState tries to do Stat
-		file.Close()
+		_ = file.Close()
 
 		// Now try to reopen the file (this will work)
 		file, err = os.OpenFile(tempFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -872,7 +872,7 @@ func TestInitFileState_CompleteCoverage(t *testing.T) {
 		}
 
 		// Close the file again to simulate an invalid file handle
-		file.Close()
+		_ = file.Close()
 
 		// Now call initFileState with a closed file (should cause error in Stat)
 		err = logger.initFileState(file, tempFile)
@@ -901,7 +901,7 @@ func TestInitFileState_CompleteCoverage(t *testing.T) {
 			t.Fatalf("Error creating file: %v", err)
 		}
 		// Ensure we close the file to avoid cleanup problems
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		// Test initFileState with timeCache nil
 		err = logger.initFileState(file, logger.Filename)
@@ -923,7 +923,7 @@ func TestInitFileState_CompleteCoverage(t *testing.T) {
 
 		// Close the currentFile if it has been set for cleanup
 		if currentFile := logger.currentFile.Load(); currentFile != nil {
-			currentFile.Close()
+			_ = currentFile.Close()
 		}
 	})
 }
@@ -1041,8 +1041,8 @@ func TestLoadFromSources_MissingBranches(t *testing.T) {
 		}
 
 		for key, value := range envVars {
-			os.Setenv(key, value)
-			defer os.Unsetenv(key)
+			_ = os.Setenv(key, value)
+			defer func() { _ = os.Unsetenv(key) }()
 		}
 
 		defaults := &LoggerConfig{
@@ -1141,8 +1141,8 @@ func TestLoadFromSources_MissingBranches(t *testing.T) {
 		prefix := "INVALID_TEST"
 
 		// Set invalid buffer size to trigger error in LoadFromEnv
-		os.Setenv(prefix+"_BUFFER_SIZE", "invalid_number")
-		defer os.Unsetenv(prefix + "_BUFFER_SIZE")
+		_ = os.Setenv(prefix+"_BUFFER_SIZE", "invalid_number")
+		defer func() { _ = os.Unsetenv(prefix + "_BUFFER_SIZE") }()
 
 		source := ConfigSource{
 			EnvPrefix: prefix,
@@ -1248,7 +1248,7 @@ func TestTriggerRotation_AllBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write initial data
 		_, err = logger.Write([]byte("initial data"))
@@ -1279,7 +1279,7 @@ func TestTriggerRotation_AllBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Set up error callback to capture errors
 		var capturedOperation string
@@ -1297,7 +1297,7 @@ func TestTriggerRotation_AllBranches(t *testing.T) {
 
 		// Force close the current file to cause rotation error
 		if currentFile := logger.currentFile.Load(); currentFile != nil {
-			currentFile.Close()
+			_ = currentFile.Close()
 		}
 
 		// Trigger rotation - should handle error gracefully
@@ -1439,8 +1439,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_BOOL_CHECKSUM"
 
 		// Set invalid boolean value for CHECKSUM
-		os.Setenv(prefix+"_CHECKSUM", "not_a_boolean")
-		defer os.Unsetenv(prefix + "_CHECKSUM")
+		_ = os.Setenv(prefix+"_CHECKSUM", "not_a_boolean")
+		defer func() { _ = os.Unsetenv(prefix + "_CHECKSUM") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1458,8 +1458,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_BOOL_ASYNC"
 
 		// Set invalid boolean value for ASYNC
-		os.Setenv(prefix+"_ASYNC", "maybe")
-		defer os.Unsetenv(prefix + "_ASYNC")
+		_ = os.Setenv(prefix+"_ASYNC", "maybe")
+		defer func() { _ = os.Unsetenv(prefix + "_ASYNC") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1477,8 +1477,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_BOOL_LOCALTIME"
 
 		// Set invalid boolean value for LOCAL_TIME
-		os.Setenv(prefix+"_LOCAL_TIME", "1.5")
-		defer os.Unsetenv(prefix + "_LOCAL_TIME")
+		_ = os.Setenv(prefix+"_LOCAL_TIME", "1.5")
+		defer func() { _ = os.Unsetenv(prefix + "_LOCAL_TIME") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1496,8 +1496,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_BOOL_ADAPTIVE"
 
 		// Set invalid boolean value for ADAPTIVE_FLUSH
-		os.Setenv(prefix+"_ADAPTIVE_FLUSH", "yes_no_maybe")
-		defer os.Unsetenv(prefix + "_ADAPTIVE_FLUSH")
+		_ = os.Setenv(prefix+"_ADAPTIVE_FLUSH", "yes_no_maybe")
+		defer func() { _ = os.Unsetenv(prefix + "_ADAPTIVE_FLUSH") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1515,8 +1515,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_INT_RETRY"
 
 		// Set invalid integer value for RETRY_COUNT
-		os.Setenv(prefix+"_RETRY_COUNT", "not_a_number")
-		defer os.Unsetenv(prefix + "_RETRY_COUNT")
+		_ = os.Setenv(prefix+"_RETRY_COUNT", "not_a_number")
+		defer func() { _ = os.Unsetenv(prefix + "_RETRY_COUNT") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1534,8 +1534,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_DUR_FLUSH"
 
 		// Set invalid duration value for FLUSH_INTERVAL
-		os.Setenv(prefix+"_FLUSH_INTERVAL", "not_a_duration")
-		defer os.Unsetenv(prefix + "_FLUSH_INTERVAL")
+		_ = os.Setenv(prefix+"_FLUSH_INTERVAL", "not_a_duration")
+		defer func() { _ = os.Unsetenv(prefix + "_FLUSH_INTERVAL") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1553,8 +1553,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_DUR_RETRY"
 
 		// Set invalid duration value for RETRY_DELAY
-		os.Setenv(prefix+"_RETRY_DELAY", "invalid_time")
-		defer os.Unsetenv(prefix + "_RETRY_DELAY")
+		_ = os.Setenv(prefix+"_RETRY_DELAY", "invalid_time")
+		defer func() { _ = os.Unsetenv(prefix + "_RETRY_DELAY") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1572,8 +1572,8 @@ func TestLoadFromEnv_MissingBranches(t *testing.T) {
 		prefix := "TEST_FILEMODE"
 
 		// Set invalid file mode value
-		os.Setenv(prefix+"_FILE_MODE", "not_octal")
-		defer os.Unsetenv(prefix + "_FILE_MODE")
+		_ = os.Setenv(prefix+"_FILE_MODE", "not_octal")
+		defer func() { _ = os.Unsetenv(prefix + "_FILE_MODE") }()
 
 		config, err := LoadFromEnv(prefix)
 		if err == nil {
@@ -1680,7 +1680,7 @@ func TestCloseAndRotateFile_AllBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write initial data
 		_, err = logger.Write([]byte("test data"))
@@ -1695,7 +1695,7 @@ func TestCloseAndRotateFile_AllBranches(t *testing.T) {
 		}
 
 		// Close the file to cause error in closeAndRotateFile
-		currentFile.Close()
+		_ = currentFile.Close()
 
 		// Test closeAndRotateFile with already closed file
 		backupName := logger.Filename + ".error_backup"
@@ -1716,7 +1716,7 @@ func TestCloseAndRotateFile_AllBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write initial data
 		_, err = logger.Write([]byte("test data"))
@@ -1770,7 +1770,7 @@ func TestWriteAsync_AllBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Fill buffer until it's full
 		for i := 0; i < 100; i++ {
@@ -1804,7 +1804,7 @@ func TestWriteAsync_AllBranches(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Write data that will fill buffer and trigger fallback
 		for i := 0; i < 10; i++ {
@@ -1835,7 +1835,7 @@ func TestAtomicOperations_ThreadSafety(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		const numGoroutines = 100
 		const operationsPerGoroutine = 100
@@ -1882,7 +1882,7 @@ func TestAtomicOperations_ThreadSafety(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error creating logger: %v", err)
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		const numGoroutines = 100
 		var wg sync.WaitGroup

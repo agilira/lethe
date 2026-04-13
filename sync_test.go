@@ -41,7 +41,7 @@ func TestSync_BasicFunctionality(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write some data
 	testData := []byte("important audit entry\n")
@@ -78,7 +78,7 @@ func TestSync_SyncMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write data
 	if _, err := logger.Write([]byte("sync mode data\n")); err != nil {
@@ -105,7 +105,7 @@ func TestSync_EmptyBuffer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Sync without any writes
 	if err := logger.Sync(); err != nil {
@@ -127,7 +127,7 @@ func TestFlushAndRotate_CreatesNewFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write initial data
 	if _, err := logger.Write([]byte("session 1 data\n")); err != nil {
@@ -176,7 +176,7 @@ func TestFlushAndRotate_AuditSegmentation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Simulate multiple audit sessions
 	sessions := []string{

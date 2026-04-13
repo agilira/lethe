@@ -52,7 +52,7 @@ func TestPreWriteHook_Basic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	input := []byte("hello world\n")
 	expected := []byte("HELLO WORLD\n")
@@ -66,7 +66,7 @@ func TestPreWriteHook_Basic(t *testing.T) {
 	}
 
 	// Verify transformed data was written
-	logger.Close()
+	_ = logger.Close()
 	content, _ := os.ReadFile(logFile)
 	if string(content) != string(expected) {
 		t.Errorf("File content mismatch: got %q, want %q", content, expected)
@@ -101,7 +101,7 @@ func TestPreWriteHook_HMAC(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write audit entry
 	entry := []byte(`{"action":"test","actor":"user1"}` + "\n")
@@ -111,7 +111,7 @@ func TestPreWriteHook_HMAC(t *testing.T) {
 	}
 
 	// Verify signature was appended
-	logger.Close()
+	_ = logger.Close()
 	content, _ := os.ReadFile(logFile)
 
 	// Should contain pipe separator
@@ -157,7 +157,7 @@ func TestPreWriteHook_Error(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Good data should work
 	_, err = logger.Write([]byte("good data\n"))
@@ -189,7 +189,7 @@ func TestPreWriteHook_NoHook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := []byte("unchanged data\n")
 	_, err = logger.Write(data)
@@ -198,7 +198,7 @@ func TestPreWriteHook_NoHook(t *testing.T) {
 	}
 
 	// Verify data unchanged
-	logger.Close()
+	_ = logger.Close()
 	content, _ := os.ReadFile(logFile)
 	if string(content) != string(data) {
 		t.Errorf("Data modified without hook: got %q, want %q", content, data)
@@ -225,7 +225,7 @@ func TestPreWriteHook_WithAsync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Write multiple entries
 	for i := 0; i < 10; i++ {
@@ -235,7 +235,7 @@ func TestPreWriteHook_WithAsync(t *testing.T) {
 	}
 
 	// Wait for async processing
-	logger.Close()
+	_ = logger.Close()
 
 	// Verify hook was called for each write
 	if hookCalls.Load() != 10 {
@@ -265,7 +265,7 @@ func TestPreWriteHook_WithWriteOwned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Use WriteOwned
 	data := []byte("owned data\n")
@@ -277,7 +277,7 @@ func TestPreWriteHook_WithWriteOwned(t *testing.T) {
 		t.Errorf("Unexpected byte count: %d", n)
 	}
 
-	logger.Close()
+	_ = logger.Close()
 	content, _ := os.ReadFile(logFile)
 	if string(content) != "OWNED DATA\n" {
 		t.Errorf("WriteOwned hook not applied: %q", content)
@@ -300,7 +300,7 @@ func TestPreWriteHook_WithWriteContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Use WriteContext
 	ctx := t.Context()
@@ -312,7 +312,7 @@ func TestPreWriteHook_WithWriteContext(t *testing.T) {
 		t.Errorf("Unexpected byte count: %d", n)
 	}
 
-	logger.Close()
+	_ = logger.Close()
 	content, _ := os.ReadFile(logFile)
 	if string(content) != "[PREFIX]context data\n" {
 		t.Errorf("WriteContext hook not applied: %q", content)

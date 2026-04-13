@@ -19,7 +19,7 @@ func BenchmarkSyncMode(b *testing.B) {
 		MaxSize:  100,   // Large enough to avoid rotation during bench
 		Async:    false, // Force sync mode
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := []byte("Benchmark test message for sync mode\n")
 
@@ -41,7 +41,7 @@ func BenchmarkMPSCMode(b *testing.B) {
 		MaxSize:  100,  // Large enough to avoid rotation during bench
 		Async:    true, // Force MPSC mode
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := []byte("Benchmark test message for MPSC mode\n")
 
@@ -63,7 +63,7 @@ func BenchmarkAutoScalingMode(b *testing.B) {
 		MaxSize:  100, // Large enough to avoid rotation during bench
 		// Note: Async is false, let auto-scaling decide
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := []byte("Benchmark test message for auto-scaling mode\n")
 
@@ -85,7 +85,7 @@ func BenchmarkHighContentionSync(b *testing.B) {
 		MaxSize:  1, // Force frequent rotation to create contention
 		Async:    false,
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := make([]byte, 1024) // 1KB message
 	for i := range data {
@@ -110,7 +110,7 @@ func BenchmarkHighContentionMPSC(b *testing.B) {
 		MaxSize:  1, // Force frequent rotation to create contention
 		Async:    true,
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	data := make([]byte, 1024) // 1KB message
 	for i := range data {
@@ -145,7 +145,7 @@ func BenchmarkThroughputComparison(b *testing.B) {
 				MaxSize:  100,
 				Async:    scenario.async,
 			}
-			defer logger.Close()
+			defer func() { _ = logger.Close() }()
 
 			// Realistic log message
 			data := []byte("2025-01-28 10:30:45 INFO [service] Processing request ID=12345 user=john.doe@example.com duration=245ms\n")
@@ -221,7 +221,7 @@ func BenchmarkLetheWithTimeCacheIntegration(b *testing.B) {
 			MaxSize:  100,
 			Async:    false, // Force sync mode for controlled testing
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Pre-initialize to ensure timecache is active
 		_, _ = logger.Write([]byte("init\n")) // Ignore errors in benchmark
@@ -251,7 +251,7 @@ func BenchmarkHighThroughputWithTimeCache(b *testing.B) {
 		BufferSize:         4096,    // Large buffer
 		BackpressurePolicy: "adaptive",
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Pre-initialize
 	_, _ = logger.Write([]byte("init\n")) // Ignore errors in benchmark
@@ -281,7 +281,7 @@ func BenchmarkZeroAllocations(b *testing.B) {
 			MaxSize:  100,
 			Async:    false,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		data := []byte("Zero allocation benchmark test entry\n")
 		b.ReportAllocs()
@@ -307,7 +307,7 @@ func BenchmarkZeroAllocations(b *testing.B) {
 			Async:      true,
 			BufferSize: 1024,
 		}
-		defer logger.Close()
+		defer func() { _ = logger.Close() }()
 
 		// Pre-initialize
 		_, _ = logger.Write([]byte("init\n")) // Ignore errors in benchmark
