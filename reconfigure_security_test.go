@@ -1,29 +1,33 @@
 // reconfigure_security_test.go: Security and adversarial tests for ReconfigureRetention.
 //
-// THREAT MODEL
+// # THREAT MODEL
 //
 // CWE-362 (Race Condition / TOCTOU):
-//   A concurrent ReconfigureRetention + rotation sequence must not expose a
-//   window where effectiveRetention() returns a partially-written policy.
-//   MITIGATION: atomic.Pointer swap is a single hardware instruction; no
-//   partial state is ever visible.
+//
+//	A concurrent ReconfigureRetention + rotation sequence must not expose a
+//	window where effectiveRetention() returns a partially-written policy.
+//	MITIGATION: atomic.Pointer swap is a single hardware instruction; no
+//	partial state is ever visible.
 //
 // CWE-20 (Improper Input Validation):
-//   Negative MaxBackups or MaxFileAge could wrap to MaxInt in unsigned math
-//   downstream, causing unbounded file retention or immediate deletion of all
-//   backups. MITIGATION: rejected at the API boundary with an explicit error.
+//
+//	Negative MaxBackups or MaxFileAge could wrap to MaxInt in unsigned math
+//	downstream, causing unbounded file retention or immediate deletion of all
+//	backups. MITIGATION: rejected at the API boundary with an explicit error.
 //
 // CWE-400 (Uncontrolled Resource Consumption):
-//   An attacker who controls the retention policy could set MaxBackups=0 +
-//   MaxFileAge=0, retaining log files forever and exhausting disk.
-//   This is an operator decision, not a security flaw in lethe itself —
-//   the caller (Metis config layer) must validate business constraints.
-//   Lethe accepts zero (no limit) as a valid operator choice.
+//
+//	An attacker who controls the retention policy could set MaxBackups=0 +
+//	MaxFileAge=0, retaining log files forever and exhausting disk.
+//	This is an operator decision, not a security flaw in lethe itself —
+//	the caller (Metis config layer) must validate business constraints.
+//	Lethe accepts zero (no limit) as a valid operator choice.
 //
 // CWE-667 (Improper Locking):
-//   effectiveRetention() must never hold a lock while rotation holds one,
-//   or deadlock is possible. MITIGATION: effectiveRetention uses only
-//   atomic.Pointer.Load(), which never blocks.
+//
+//	effectiveRetention() must never hold a lock while rotation holds one,
+//	or deadlock is possible. MITIGATION: effectiveRetention uses only
+//	atomic.Pointer.Load(), which never blocks.
 //
 // Copyright (c) 2025 AGILira
 // SPDX-License-Identifier: MPL-2.0
