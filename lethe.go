@@ -187,6 +187,10 @@ type Logger struct {
 	// Timestamps for observability (atomic storage as unix nano)
 	lastWriteTime atomic.Int64 // Unix nano of last write
 	lastDropTime  atomic.Int64 // Unix nano of last drop
+
+	// WHY atomic.Pointer: ReconfigureRetention must be safe under concurrent
+	// writes. Swapping a pointer is a single atomic op; no lock on the hot path.
+	retention atomic.Pointer[RetentionPolicy]
 }
 
 // New creates a new Logger with safe defaults and validates configuration.

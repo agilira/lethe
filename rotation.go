@@ -333,8 +333,10 @@ func (l *Logger) scheduleBackgroundTasks(backupName string) {
 		return
 	}
 
+	ret := l.effectiveRetention()
+
 	// Submit cleanup task if needed (least intrusive)
-	if l.MaxBackups > 0 {
+	if ret.MaxBackups > 0 {
 		l.safeSubmitTask(BackgroundTask{
 			TaskType: "cleanup",
 			Logger:   l,
@@ -342,7 +344,7 @@ func (l *Logger) scheduleBackgroundTasks(backupName string) {
 	}
 
 	// Submit checksum task if enabled (read-only, safer)
-	if l.Checksum {
+	if ret.Checksum {
 		l.safeSubmitTask(BackgroundTask{
 			TaskType: "checksum",
 			FilePath: backupName,
@@ -351,7 +353,7 @@ func (l *Logger) scheduleBackgroundTasks(backupName string) {
 	}
 
 	// Submit compression task if enabled
-	if l.Compress {
+	if ret.Compress {
 		l.safeSubmitTask(BackgroundTask{
 			TaskType: "compress",
 			FilePath: backupName,
@@ -417,9 +419,10 @@ func (l *Logger) cleanupOldFiles() {
 		}
 
 		// Check age-based cleanup first
-		if l.MaxFileAge > 0 {
+		ret := l.effectiveRetention()
+		if ret.MaxFileAge > 0 {
 			fileAge := now.Sub(info.ModTime())
-			if fileAge > l.MaxFileAge {
+			if fileAge > ret.MaxFileAge {
 				// File is too old, remove it
 				err := os.Remove(match)
 				if err != nil {
@@ -436,7 +439,8 @@ func (l *Logger) cleanupOldFiles() {
 	}
 
 	// Apply count-based cleanup (MaxBackups)
-	if l.MaxBackups <= 0 || len(files) <= l.MaxBackups {
+	ret2 := l.effectiveRetention()
+	if ret2.MaxBackups <= 0 || len(files) <= ret2.MaxBackups {
 		return // Nothing to clean up by count
 	}
 
@@ -446,7 +450,7 @@ func (l *Logger) cleanupOldFiles() {
 	})
 
 	// Remove oldest files beyond MaxBackups
-	filesToRemove := len(files) - l.MaxBackups
+	filesToRemove := len(files) - ret2.MaxBackups
 	for i := 0; i < filesToRemove; i++ {
 		err := os.Remove(files[i].name)
 		if err != nil {

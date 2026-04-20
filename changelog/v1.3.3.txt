@@ -1,0 +1,18 @@
+# v1.3.3 (2026-04-20)
+
+## Added
+- Hot-reloadable retention policy: new `ReconfigureRetention` method and `RetentionPolicy` struct for dynamic log retention changes without restarting the logger.
+- `effectiveRetention()` method for atomic, race-free access to the active retention policy.
+- Extensive unit, fuzz, and security tests for retention policy reconfiguration (see: `reconfigure_test.go`, `reconfigure_fuzz_test.go`, `reconfigure_security_test.go`).
+
+## Changed
+- Rotation and cleanup logic now uses the active retention policy atomically, supporting runtime changes.
+- Logger struct now includes an atomic pointer to the retention policy for safe concurrent updates.
+
+## Security
+- Input validation for retention policy: negative values for `MaxBackups` and `MaxFileAge` are rejected.
+- Atomic pointer swap ensures no torn reads or deadlocks under concurrent reconfiguration and rotation.
+
+## Notes
+- Zero values for `MaxBackups` and `MaxFileAge` disable count- and age-based cleanup, respectively.
+- All changes are backward compatible; construction-time fields are used if no policy is set.
