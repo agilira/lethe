@@ -51,7 +51,11 @@ func TestReconfigureRetention_Security_MaxInt32BackupsAccepted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	// Large positive value is a valid (if impractical) operator choice.
 	if err := l.ReconfigureRetention(RetentionPolicy{MaxBackups: math.MaxInt32}); err != nil {
@@ -67,7 +71,11 @@ func TestReconfigureRetention_Security_NegativeMaxBackupsBlocked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	cases := []int{-1, -100, math.MinInt32, math.MinInt64}
 	for _, n := range cases {
@@ -85,7 +93,11 @@ func TestReconfigureRetention_Security_NegativeMaxFileAgeBlocked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	cases := []time.Duration{-time.Nanosecond, -time.Hour, time.Duration(math.MinInt64)}
 	for _, d := range cases {
@@ -105,7 +117,11 @@ func TestReconfigureRetention_Security_NoTornReadUnderContention(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	const (
 		writers = 4
@@ -159,7 +175,11 @@ func TestReconfigureRetention_Security_NoDeadlockDuringRotation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	done := make(chan struct{})
 	go func() {
@@ -187,7 +207,11 @@ func TestReconfigureRetention_Security_IdempotentReconfigure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	policy := RetentionPolicy{MaxBackups: 5, MaxFileAge: 24 * time.Hour, Checksum: true}
 	for range 100 {

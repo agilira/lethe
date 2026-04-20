@@ -44,6 +44,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -676,8 +677,17 @@ func TestSecurity_FileMode_Applied(t *testing.T) {
 	}
 
 	actualMode := info.Mode().Perm()
-	if actualMode != mode {
-		t.Errorf("file mode = %o, want %o", actualMode, mode)
+	// On Windows, POSIX file permissions are not enforced; files are usually created as 0666 regardless of requested mode.
+	// See: https://github.com/golang/go/issues/33357
+	// Accept both 0640 (expected) and 0666 (Windows default) on Windows for cross-platform compatibility.
+	if runtime.GOOS == "windows" {
+		if actualMode != mode && actualMode != 0o666 {
+			t.Errorf("file mode = %o, want %o or 666 (Windows ignores POSIX permissions)", actualMode, mode)
+		}
+	} else {
+		if actualMode != mode {
+			t.Errorf("file mode = %o, want %o", actualMode, mode)
+		}
 	}
 }
 

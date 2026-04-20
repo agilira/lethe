@@ -33,7 +33,11 @@ func FuzzReconfigureRetention(f *testing.F) {
 	if err != nil {
 		f.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			f.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	f.Fuzz(func(t *testing.T, maxBackups int64, maxFileAge int64, compress, checksum bool) {
 		policy := RetentionPolicy{

@@ -29,7 +29,11 @@ func TestEffectiveRetention_FallsBackToConstructionFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	ret := l.effectiveRetention()
 	if ret.MaxBackups != 5 {
@@ -63,7 +67,11 @@ func TestReconfigureRetention_UpdatesPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	if err := l.ReconfigureRetention(RetentionPolicy{
 		MaxBackups: 10,
@@ -102,7 +110,11 @@ func TestReconfigureRetention_OverridesConstructionFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	if err := l.ReconfigureRetention(RetentionPolicy{
 		MaxBackups: 0,
@@ -134,7 +146,11 @@ func TestReconfigureRetention_ZeroValueIsValid(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	if err := l.ReconfigureRetention(RetentionPolicy{}); err != nil {
 		t.Errorf("zero RetentionPolicy should be valid, got: %v", err)
@@ -151,7 +167,11 @@ func TestReconfigureRetention_MultipleCallsLastWins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	for i := range 5 {
 		_ = l.ReconfigureRetention(RetentionPolicy{MaxBackups: i + 1})
@@ -173,7 +193,11 @@ func TestReconfigureRetention_LongRetentionForCompliance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	sevenYears := 7 * 365 * 24 * time.Hour
 	if err := l.ReconfigureRetention(RetentionPolicy{
@@ -208,7 +232,11 @@ func TestReconfigureRetention_NegativeMaxBackupsIsError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	if err := l.ReconfigureRetention(RetentionPolicy{MaxBackups: -1}); err == nil {
 		t.Error("expected error for negative MaxBackups, got nil")
@@ -225,7 +253,11 @@ func TestReconfigureRetention_NegativeMaxFileAgeIsError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	if err := l.ReconfigureRetention(RetentionPolicy{MaxFileAge: -time.Hour}); err == nil {
 		t.Error("expected error for negative MaxFileAge, got nil")
@@ -243,7 +275,11 @@ func TestReconfigureRetention_PolicyUnchangedOnValidationError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	_ = l.ReconfigureRetention(RetentionPolicy{MaxBackups: -1})
 
@@ -269,7 +305,11 @@ func TestReconfigureRetention_ConcurrentWithWrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	const goroutines = 8
 	var wg sync.WaitGroup
@@ -305,7 +345,11 @@ func TestReconfigureRetention_ConcurrentReaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	const goroutines = 16
 	var wg sync.WaitGroup
@@ -343,7 +387,11 @@ func TestReconfigureRetention_ChecksumReflectedInEffectivePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Errorf("Close() error: %v", err)
+		}
+	}()
 
 	// Before reconfigure: Checksum is false.
 	if l.effectiveRetention().Checksum {
